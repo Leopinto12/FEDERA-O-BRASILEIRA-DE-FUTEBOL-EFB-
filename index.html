@@ -184,7 +184,7 @@
     <div class="login-box">
         <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
         <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">ACESSO DE MEMBRO</h2>
-        <input type="text" placeholder="Usuário/E-mail" id="login-user" class="login-input" />
+        <input type="email" placeholder="E-mail" id="login-email" class="login-input" />
         <input type="password" placeholder="Senha" id="login-pass" class="login-input" />
         <button onclick="fazerLogin()" class="action-button">ENTRAR</button>
         <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
@@ -204,7 +204,7 @@
         <input type="url" placeholder="URL da Foto de Perfil (Opcional)" id="register-profile-pic" class="login-input" />
         
         <input type="text" placeholder="Nome de Usuário (Será seu nome no feed)" id="register-user" class="login-input" />
-        <input type="email" placeholder="E-mail do Membro" id="register-email" class="login-input" />
+        <input type="email" placeholder="E-mail do Membro (Obrigatório)" id="register-email" class="login-input" />
         <input type="password" placeholder="Senha (Mínimo 6 caracteres)" id="register-pass" class="login-input" />
         <button onclick="fazerCadastro()" class="action-button">CADASTRAR MEMBRO</button>
         <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
@@ -264,6 +264,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
 <script>
     // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE **
@@ -279,18 +280,21 @@
 
     // Inicialize o Firebase
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore(); // Objeto de referência ao Banco de Dados
+    const db = firebase.firestore(); 
+    const auth = firebase.auth(); // NOVO: Referência ao Firebase Authentication
 
-    // Variável de Cache Local para trabalhar com os dados após o carregamento
+    // Variável de Cache Local
     let usuariosCadastrados = {}; 
     let posts = [];
-    let loggedInUser = null;
+    let loggedInUser = null; // Armazena o username key (ID do Firestore)
+    let loggedInUserUID = null; // Armazena o UID do Firebase Auth
 
     // Objeto padrão para garantir que todos os times tenham essas chaves zeradas
     const defaultStats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
 
 
     // --- Data dos Times (Série A e B 2025) ---
+    // (Mantido o bloco teamData completo)
     const teamData = {
         'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
         'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
@@ -336,59 +340,107 @@
         'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
     };
 
-    // Usuário administrador padrão (usado apenas se não for encontrado no Firebase)
+    // Usuário administrador padrão (usado apenas se não for encontrado no Firestore)
     const adminUserKey = 'robbenanthony';
     const initialAdminData = { 
         email: 'robbenanthony12@gmail.com', 
-        senha: 'Leoup1234', 
+        senha: 'Leoup1234', // Esta senha é usada apenas para a criação inicial do doc no Firestore
         isAdmin: true, 
         userName: 'Robben Anthony',
         teamName: 'Administrador', 
         series: null, 
         logo: 'https://i.imgur.com/uG7b3K8.png', 
         profilePic: 'https://i.imgur.com/uG7b3K8.png', 
-        stats: defaultStats 
+        stats: defaultStats,
+        uid: null // Será preenchido com o UID do Auth
     };
 
     // --- Funções de Sincronização e Ajuda (FIREBASE) ---
     
-    // NOVO: Função para salvar/atualizar USUÁRIOS no Firebase (Coleção 'users')
-    async function saveUsersToFirebase(userKey, userData) {
+    // NOVO: Função para salvar/atualizar USUÁRIOS no Firestore (Coleção 'users')
+    async function saveUsersToFirestore(userKey, userData) {
         try {
-            // Certifica-se que o objeto tem as chaves stats
+            // Garante que o objeto tem as chaves stats
             userData.stats = { ...defaultStats, ...userData.stats }; 
             await db.collection("users").doc(userKey).set(userData);
         } catch (e) {
-            console.error("Erro ao salvar usuário: ", e);
-            alert("Erro ao salvar dados do usuário no Firebase. Verifique sua configuração.");
+            console.error("Erro ao salvar usuário no Firestore: ", e);
+            alert("Erro crítico ao salvar dados. Verifique Regras do Firestore.");
         }
     }
+    
+    // NOVO: Função que verifica e cria o administrador no Auth e no Firestore
+    async function setupAdminUser() {
+        const adminEmail = initialAdminData.email;
+        const adminPass = initialAdminData.senha;
+        let adminUID = null;
+        let firestoreDocExists = false;
+
+        // 1. Tenta buscar o UID do ADM pelo e-mail (usando Firestore/users)
+        try {
+            const adminDoc = await db.collection("users").doc(adminUserKey).get();
+            if (adminDoc.exists) {
+                firestoreDocExists = true;
+                adminUID = adminDoc.data().uid;
+                initialAdminData.uid = adminUID;
+            }
+        } catch (e) {
+             console.warn("Não foi possível verificar documento admin no Firestore. Tentando criar.", e);
+        }
+        
+        // 2. Tenta criar a conta no Firebase Auth se o doc não existe ou se o UID não foi encontrado
+        if (!adminUID) {
+            try {
+                // Tenta logar (se a conta Auth já existir, não tentamos criar)
+                const userCredential = await auth.signInWithEmailAndPassword(adminEmail, adminPass);
+                adminUID = userCredential.user.uid;
+                initialAdminData.uid = adminUID;
+                console.log("Conta ADM já existe no Auth e foi validada.");
+
+            } catch (authError) {
+                // Se o login falhar (por não existir), tenta criar a conta Auth
+                if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password') {
+                    try {
+                        const userCredential = await auth.createUserWithEmailAndPassword(adminEmail, adminPass);
+                        adminUID = userCredential.user.uid;
+                        initialAdminData.uid = adminUID;
+                        console.log("Conta ADM criada com sucesso no Auth.");
+                    } catch (e) {
+                        console.error("ERRO CRÍTICO: Falha ao criar conta ADM no Auth. E-mail/Senha deve estar ativo!:", e);
+                        // Se falhou ao criar a conta Auth, não podemos continuar, mas registramos no Firestore apenas para o cache local
+                        initialAdminData.uid = "AUTH_FAILED_" + new Date().getTime();
+                    }
+                } else {
+                    console.error("Erro de Auth do ADM (Verifique a API Key e o Auth Domain):", authError);
+                }
+            }
+        }
+        
+        // 3. Garante que o documento no Firestore exista e esteja sincronizado
+        if (!firestoreDocExists) {
+            initialAdminData.uid = adminUID;
+            await saveUsersToFirestore(adminUserKey, initialAdminData);
+        }
+    }
+
     
     // NOVO: Função para carregar TODOS os dados (Usuários e Posts)
     async function loadDataFromFirebase() {
         try {
-            // 1. Carregar Usuários
+            // 1. Setup do Administrador (Garanti que existe no Auth e Firestore)
+            await setupAdminUser(); 
+
+            // 2. Carregar Usuários
             const userSnapshot = await db.collection("users").get();
             usuariosCadastrados = {};
-            let adminFound = false;
             
             userSnapshot.forEach(doc => {
                 const userData = doc.data();
                 // 🚨 CORREÇÃO DE BUG: Garante que o stats tenha todos os campos para evitar NaN
                 userData.stats = { ...defaultStats, ...userData.stats }; 
                 usuariosCadastrados[doc.id] = userData;
-                if (doc.id === adminUserKey) {
-                    adminFound = true;
-                }
             });
-
-            // 2. Cria o administrador se ele não existir no banco
-            if (!adminFound) {
-                await saveUsersToFirebase(adminUserKey, initialAdminData);
-                usuariosCadastrados[adminUserKey] = initialAdminData;
-            }
-
-
+            
             // 3. Carregar Posts (ordenado do mais novo para o mais antigo)
             const postSnapshot = await db.collection("posts").orderBy("timestamp", "desc").get(); 
             posts = [];
@@ -399,10 +451,10 @@
             console.log(`Dados carregados: ${Object.keys(usuariosCadastrados).length} usuários, ${posts.length} posts.`);
 
         } catch (e) {
-            console.error("Erro ao carregar dados do Firebase. Verifique a conexão, as chaves ou as Regras de Segurança (Firestore).", e);
+            console.error("🚨 ERRO CRÍTICO: Falha ao carregar dados do Firebase. Verifique a conexão e as Regras de Segurança (Firestore).", e);
             alert("Falha ao carregar dados do Firebase. Verifique o console (F12) para detalhes.");
             
-            // Se falhou ao carregar, garante que o admin está no cache local para o login inicial funcionar.
+            // Fallback para o login do ADM local
             if (!usuariosCadastrados[adminUserKey]) {
                  usuariosCadastrados[adminUserKey] = initialAdminData;
             }
@@ -414,7 +466,7 @@
         
         await loadDataFromFirebase(); // Carrega os dados persistentes
 
-        // Checa o usuário logado (usamos localStorage apenas para a sessão)
+        // Checa o usuário logado (usamos localStorage para manter a sessão)
         const storedUser = localStorage.getItem('loggedInUser');
         if (storedUser && usuariosCadastrados[storedUser]) {
             loggedInUser = storedUser;
@@ -426,7 +478,7 @@
         renderTeamsList();
     });
 
-    // --- Funções de Modais e Navegação (Permanecem) ---
+    // --- Funções de Modais e Navegação (Mantidas) ---
     function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
     function closeLogin() { document.getElementById('login').style.display = 'none'; document.body.style.overflow = 'auto'; }
     function openRegister() { document.getElementById('login').style.display = 'none'; document.getElementById('register').style.display = 'block'; document.body.style.overflow = 'hidden'; }
@@ -447,34 +499,33 @@
     }
 
 
-    // --- Funções de Login e Cadastro ---
-    function updateHeaderButtons(user) {
+    // --- Funções de Login e Cadastro (ATUALIZADAS COM FIREBASE AUTH) ---
+    function updateHeaderButtons(userKey) {
         const loginBtn = document.getElementById('header-login-button');
         const adminBtn = document.getElementById('admin-panel-button');
         const postForm = document.getElementById('post-form-container');
 
-        if (user) {
-            if (usuariosCadastrados[user] && usuariosCadastrados[user].isAdmin) { // Checa se o usuário existe antes de isAdmin
+        if (userKey && usuariosCadastrados[userKey]) {
+            const user = usuariosCadastrados[userKey];
+            const displayName = user.userName || user.teamName || userKey;
+
+            if (user.isAdmin) {
                 adminBtn.style.display = 'inline-block';
-                
-                loginBtn.textContent = `PAINEL ADMIN (${usuariosCadastrados[user].userName})`;
+                loginBtn.textContent = `PAINEL ADMIN (${displayName})`;
                 loginBtn.onclick = openAdminPanel; 
                 loginBtn.style.background = '#ff004c'; 
-
                 adminBtn.onclick = fazerLogout;
                 adminBtn.textContent = `LOGOUT`;
                 adminBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'inline-block';
-
-            } else if (usuariosCadastrados[user]) {
-                loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].userName || usuariosCadastrados[user].teamName})`;
+            } else {
+                loginBtn.textContent = `LOGOUT (${displayName})`;
                 loginBtn.onclick = fazerLogout;
                 loginBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'none';
             }
             
             postForm.style.display = 'block';
-
         } else {
             loginBtn.textContent = 'ACESSAR CONTA';
             loginBtn.onclick = openLogin;
@@ -484,33 +535,67 @@
         }
     }
 
-    function fazerLogin() {
-        const user = document.getElementById('login-user').value.trim();
+    async function fazerLogin() { // AGORA É ASYNC!
+        const email = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
 
-        const userFound = Object.keys(usuariosCadastrados).find(key => 
-            key === user || (usuariosCadastrados[key] && usuariosCadastrados[key].email === user)
-        );
+        if (!email || !pass) {
+            alert('Preencha o e-mail e a senha.');
+            return;
+        }
 
-        if (userFound && usuariosCadastrados[userFound] && usuariosCadastrados[userFound].senha === pass) {
-            loggedInUser = userFound;
-            // Salva apenas a sessão no localStorage
-            localStorage.setItem('loggedInUser', loggedInUser); 
-            closeLogin();
-            updateHeaderButtons(loggedInUser);
-            alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
-            renderFeed(); 
-        } else {
-            alert('❌ Credenciais incorretas. Verifique seu Usuário/E-mail e Senha.');
+        try {
+            // 1. Tenta fazer login usando Firebase Auth
+            const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+            const uid = userCredential.user.uid;
+
+            // 2. Busca o usuário correspondente no Firestore (pelo UID)
+            const userSnapshot = await db.collection("users").where("uid", "==", uid).limit(1).get();
+            
+            if (!userSnapshot.empty) {
+                const doc = userSnapshot.docs[0];
+                loggedInUser = doc.id; // Armazena a chave de usuário (username key)
+                loggedInUserUID = uid;
+                localStorage.setItem('loggedInUser', loggedInUser); 
+                
+                closeLogin();
+                updateHeaderButtons(loggedInUser);
+                alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
+                renderFeed(); 
+            } else {
+                // Cenário raro: Conta Auth existe, mas não o doc no Firestore
+                alert('❌ Login bem-sucedido, mas dados do usuário incompletos. Contate o administrador.');
+                await auth.signOut();
+            }
+
+        } catch (error) {
+            console.error("Erro no login:", error);
+            let errorMessage = "❌ Falha no login. Verifique o e-mail e a senha.";
+            if (error.code === 'auth/wrong-password') {
+                errorMessage = "❌ Senha incorreta.";
+            } else if (error.code === 'auth/user-not-found') {
+                errorMessage = "❌ Usuário não encontrado.";
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = "❌ E-mail inválido.";
+            } else if (error.code === 'auth/operation-not-allowed') {
+                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth.";
+            }
+            alert(errorMessage);
         }
     }
 
-    function fazerLogout() {
-        loggedInUser = null;
-        localStorage.removeItem('loggedInUser'); 
-        updateHeaderButtons(null);
-        alert('Você foi desconectado(a) com sucesso.');
-        renderFeed(); 
+    async function fazerLogout() {
+        try {
+            await auth.signOut(); // Desloga do Firebase Auth
+            loggedInUser = null;
+            loggedInUserUID = null;
+            localStorage.removeItem('loggedInUser'); 
+            updateHeaderButtons(null);
+            alert('Você foi desconectado(a) com sucesso.');
+            renderFeed();
+        } catch (e) {
+            console.error("Erro ao fazer logout:", e);
+        }
     }
 
     async function fazerCadastro() { // AGORA É ASYNC!
@@ -520,12 +605,12 @@
         const pass = document.getElementById('register-pass').value.trim();
 
         if (!user || !email || !pass || pass.length < 6) {
-            alert('🚨 Por favor, preencha todos os campos obrigatórios e use uma senha de no mínimo 6 caracteres.');
+            alert('🚨 Por favor, preencha o Nome de Usuário, E-mail, e use uma senha de no mínimo 6 caracteres.');
             return;
         }
         
         const usernameKey = user.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
-            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
+            const map = { 'á': 'a', 'é': 'e', 'í': 'e', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
             return map[match] || match;
         });
         
@@ -534,30 +619,47 @@
             return;
         }
 
-        const newUser = {
-            email: email,
-            senha: pass,
-            isAdmin: false,
-            userName: user, 
-            profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
-            teamName: null, 
-            series: null,
-            logo: null, 
-            stats: defaultStats 
-        };
+        try {
+            // 1. Cria o usuário no Firebase Authentication
+            const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+            const uid = userCredential.user.uid;
 
-        // 🚨 Salva no Firebase (novo backend)
-        await saveUsersToFirebase(usernameKey, newUser);
-        
-        // Atualiza o cache local
-        usuariosCadastrados[usernameKey] = newUser;
-        
-        alert(`🎉 Usuário "${user}" cadastrado com sucesso! Agora o administrador pode vincular um time a você.`);
-        closeRegister();
-        openLogin();
+            // 2. Cria o documento correspondente no Firestore
+            const newUser = {
+                uid: uid, // Salva o UID para buscar no login
+                email: email,
+                senha: pass, // Salvo aqui por compatibilidade, mas o Auth cuida da segurança
+                isAdmin: false,
+                userName: user, 
+                profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
+                teamName: null, 
+                series: null,
+                logo: null, 
+                stats: defaultStats 
+            };
+
+            await saveUsersToFirestore(usernameKey, newUser);
+            
+            // 3. Atualiza o cache local
+            usuariosCadastrados[usernameKey] = newUser;
+            
+            alert(`🎉 Usuário "${user}" cadastrado com sucesso! Agora o administrador pode vincular um time a você.`);
+            closeRegister();
+            openLogin();
+
+        } catch (error) {
+            console.error("Erro no cadastro:", error);
+            let errorMessage = "❌ Falha no cadastro.";
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = "❌ Este e-mail já está em uso.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "❌ A senha é muito fraca (mínimo 6 caracteres).";
+            }
+            alert(errorMessage);
+        }
     }
-    
-    // --- Funções de Feed ---
+
+    // --- Funções de Feed (Mantidas) ---
     function showImagePreview(url) {
         const imgPreview = document.getElementById('image-preview');
         if (url) {
@@ -684,7 +786,7 @@
         });
     }
 
-    // --- Funções de Classificação (Permanecem) ---
+    // --- Funções de Classificação (Mantidas) ---
     function sortTeams(a, b) {
         if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
         if (b.stats.Vitórias !== a.stats.Vitórias) return b.stats.Vitórias - a.stats.Vitórias;
@@ -734,7 +836,6 @@
                 `;
                 teamCell.style.textAlign = 'left';
 
-                // CORREÇÃO: Usamos || 0 para garantir que não apareça NaN ou undefined, embora o loadData garanta isso.
                 row.insertCell().textContent = stats.Pontos || 0;
                 row.insertCell().textContent = stats.Jogos || 0;
                 row.insertCell().textContent = stats.Vitórias || 0;
@@ -750,24 +851,22 @@
         renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
 
-    // --- Funções de Gestão Admin ---
+    // --- Funções de Gestão Admin (Mantidas) ---
     
     function getAllAvailableTeams() {
         const allUsers = Object.values(usuariosCadastrados);
         const assignedTeamNames = allUsers
-            .filter(user => user.teamName) // Filtra todos os usuários que têm um time atribuído (inclui admin, mas teamName é 'Administrador' - que não está na teamData)
+            .filter(user => user.teamName) 
             .map(user => user.teamName);
             
         const allBRTeams = Object.keys(teamData); 
         
-        // Retorna todos os times brasileiros que AINDA NÃO estão atribuídos a ninguém.
         return allBRTeams.filter(teamName => !assignedTeamNames.includes(teamName));
     }
 
     function renderTeamsList() {
         const teamsList = document.getElementById('times-list');
         teamsList.innerHTML = '';
-        // Pega APENAS os usuários que têm time vinculado para a lista pública
         const teams = getAllTeams().sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
 
         if (teams.length === 0) {
@@ -799,7 +898,6 @@
     function renderAdminTeamList() {
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
-        // Pega TODOS os usuários, exceto o administrador principal
         const users = Object.keys(usuariosCadastrados)
             .filter(u => !usuariosCadastrados[u].isAdmin)
             .map(u => ({ username: u, ...usuariosCadastrados[u] }))
@@ -847,47 +945,51 @@
                     <img src="${user.profilePic}" alt="Perfil" style="width: 40px; height: 40px; margin-right: 10px; border-radius: 50%; border: 2px solid #f2c94c; object-fit: cover;">
                     <div>
                         <strong style="color: #f2c94c;">${user.userName}</strong>
-                        <p style="margin: 0; font-size: 0.8em; color: #ccc;">Chave de Acesso: ${user.username}</p>
+                        <p style="margin: 0; font-size: 0.8em; color: #ccc;">E-mail: ${user.email}</p>
                     </div>
                 </div>
                 <div style="width: 100%; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
                     ${actionHtml}
-                    <button onclick="banUser('${user.username}')" style="background: #000; color: #fff; border: 1px solid #ff004c; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-top: 10px;">Banir Usuário</button>
+                    <button onclick="banUser('${user.username}', '${user.email}')" style="background: #000; color: #fff; border: 1px solid #ff004c; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-top: 10px;">Banir Usuário</button>
                 </div>
             `;
             adminList.appendChild(teamElement);
         });
     }
 
-    async function banUser(username) { // AGORA É ASYNC!
+    async function banUser(username, email) { // AGORA É ASYNC!
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
 
         const userToDelete = usuariosCadastrados[username];
         if (!userToDelete) return; 
 
         const userName = userToDelete.userName;
-        const teamName = userToDelete.teamName;
+        
 
-        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName}? Isso é irreversível. Todos os dados e posts serão excluídos.`)) {
+        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName} (${email})? Isso é irreversível. Todos os dados e posts serão excluídos.`)) {
             try {
-                // 1. Deleta o usuário no Firebase
+                // 1. Tenta deletar no Firebase Auth (se existir)
+                // Nota: Deletar diretamente o usuário Auth exige o SDK Admin ou uma Cloud Function. 
+                // Por isso, deletamos apenas o doc no Firestore, o que impede o login na nossa app.
+                
+                // 2. Deleta o usuário no Firestore
                 await db.collection("users").doc(username).delete();
 
-                // 2. Atualiza o cache local (remove o usuário)
+                // 3. Atualiza o cache local (remove o usuário)
                 delete usuariosCadastrados[username];
 
-                // 3. Recarrega os dados completos do Firebase para garantir a sincronia
+                // 4. Recarrega os dados completos do Firebase para garantir a sincronia
                 await loadDataFromFirebase();
                 
-                // 4. Atualiza a UI
+                // 5. Atualiza a UI
                 renderAdminTeamList();
                 renderTeamsList();
                 renderFeed();
-                alert(`Usuário ${userName} e seus dados foram permanentemente removidos.`);
+                alert(`Usuário ${userName} e seus dados foram removidos do Firestore.`);
 
             } catch (e) {
                 console.error("Erro ao banir usuário:", e);
-                alert("Erro ao banir o usuário no Firebase.");
+                alert("Erro ao banir o usuário no Firestore. Verifique as regras de segurança.");
             }
         }
     }
@@ -911,11 +1013,11 @@
         user.teamName = teamName;
         user.series = teamDetails.series;
         user.logo = teamDetails.logo;
-        user.stats = defaultStats; // Garante que as estatísticas são zeradas
-        user.username = username; // Adiciona a chave de volta ao objeto para facilidade de uso
+        user.stats = defaultStats; 
+        user.username = username; 
 
         // 🚨 Salva no Firebase
-        await saveUsersToFirebase(username, user);
+        await saveUsersToFirestore(username, user);
         
         renderAdminTeamList();
         renderClassificationTables();
@@ -933,10 +1035,10 @@
         user.teamName = null;
         user.series = null;
         user.logo = null;
-        user.stats = defaultStats; // Garante que as estatísticas são zeradas
+        user.stats = defaultStats; 
         
         // 🚨 Salva no Firebase
-        await saveUsersToFirebase(username, user);
+        await saveUsersToFirestore(username, user);
         
         renderAdminTeamList();
         renderClassificationTables();
@@ -963,18 +1065,7 @@
         const user = usuariosCadastrados[username];
         const oldUserName = user.userName;
 
-        // 1. Atualizar posts no CACHE LOCAL (o post.id não muda)
-        posts.forEach(post => {
-            if (post.author === oldUserName || post.author === user.teamName) {
-                // Atualiza o nome do autor se o nome de exibição (teamName ou userName) mudou
-                if (post.author === oldUserName) {
-                    post.author = newUserName; 
-                }
-                post.authorPic = newPicUrl; 
-            }
-        });
-
-        // 2. Atualizar o nome e a imagem
+        // Atualiza a imagem e o nome
         user.userName = newUserName;
         if (user.teamName) {
             user.logo = newPicUrl;
@@ -982,29 +1073,8 @@
             user.profilePic = newPicUrl;
         }
         
-        // 3. Lógica de atualização de CHAVE
-        const newUsernameKey = newUserName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
-            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
-            return map[match] || match;
-        });
-        
-        let targetKey = username;
-
-        if (newUsernameKey !== username) {
-            // Se a chave mudou, remove o antigo, salva o novo, e atualiza o ID do login
-            delete usuariosCadastrados[username]; 
-            usuariosCadastrados[newUsernameKey] = user;
-            await db.collection("users").doc(username).delete(); 
-            
-            if (loggedInUser === username) {
-                loggedInUser = newUsernameKey;
-                localStorage.setItem('loggedInUser', loggedInUser);
-            }
-            targetKey = newUsernameKey;
-        }
-        
         // 🚨 Salva o usuário (novo ou antigo ID) no Firebase
-        await saveUsersToFirebase(targetKey, user);
+        await saveUsersToFirestore(username, user);
         
         // 🚨 Recarrega os dados completos do Firebase para sincronizar o feed
         await loadDataFromFirebase();
@@ -1024,12 +1094,10 @@
         time1Select.innerHTML = '<option value="">-- Selecione --</option>';
         time2Select.innerHTML = '<option value="">-- Selecione --</option>';
 
-        // Pega APENAS times que estão vinculados a usuários e que pertencem à Série filtrada
         const teams = getAllTeams().filter(team => team.series === seriesFilter);
 
         teams.forEach(team => {
             const option1 = document.createElement('option');
-            // Usamos o username como value para facilitar a busca no objeto usuariosCadastrados
             option1.value = team.username; 
             option1.textContent = team.teamName;
             time1Select.appendChild(option1);
@@ -1107,8 +1175,8 @@
         stats2.Saldo = stats2.GolsPro - stats2.GolsContra;
 
         // 🚨 SALVA AMBOS OS TIMES NO FIREBASE
-        await saveUsersToFirebase(user1, usuariosCadastrados[user1]);
-        await saveUsersToFirebase(user2, usuariosCadastrados[user2]);
+        await saveUsersToFirestore(user1, usuariosCadastrados[user1]);
+        await saveUsersToFirestore(user2, usuariosCadastrados[user2]);
         
         renderClassificationTables();
         
@@ -1118,7 +1186,7 @@
         alert(`✅ Resultado registrado! ${usuariosCadastrados[user1].teamName} ${gols1} x ${gols2} ${usuariosCadastrados[user2].teamName}. Classificação atualizada.`);
     }
     
-    // --- Funções de Perfil (Permanecem) ---
+    // --- Funções de Perfil (Mantidas) ---
     function openPerfilTime(username) {
         const perfilModal = document.getElementById('perfil-time');
         const team = usuariosCadastrados[username];
@@ -1130,7 +1198,6 @@
         document.getElementById('perfil-time-serie').textContent = team.series ? `Série: ${team.series}` : 'Série: Aguardando Alocação';
         document.getElementById('perfil-time-user-name').textContent = `Gerenciado por: ${team.userName}`;
 
-        // Garante o uso de defaultStats se por acaso estiver faltando
         const stats = team.stats || defaultStats; 
 
         let statsHtml = `
