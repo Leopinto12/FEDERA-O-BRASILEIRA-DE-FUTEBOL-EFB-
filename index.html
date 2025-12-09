@@ -85,14 +85,14 @@
             ACESSAR CONTA
         </button>
         <button onclick="openAdminPanel()" id="admin-panel-button" style="display:none; margin-top: 20px; padding: 10px 20px; background: #ff004c; border: none; border-radius: 8px; font-weight: bold; color: #ffffff; cursor: pointer; box-shadow: 0 0 10px #ff004c; margin-left: 10px; transition: background 0.3s;">
-            PAINEL ADMIN
+            LOGOUT
         </button>
     </header>
 
     <nav>
         <a href="#feed">Feed</a>
         <a href="#series">Séries A e B</a>
-        <a href="#times">Times Cadastrados</a>
+        <a href="#times">Times Vinculados</a>
         <a href="#" onclick="openLogin()">Login/Cadastro</a>
     </nav>
 
@@ -313,11 +313,11 @@
     // Função que constrói os dados iniciais dos times (COMPLETA)
     function initializeTeamData() {
         const users = {
-            'admin': { 
-                email: 'admin@superliga.br', 
-                senha: '123', 
+            'robbenanthony': { // CHAVE INTERNA AJUSTÁVEL: Nome de usuário em minúsculas e sem espaços/acentos
+                email: 'robbenanthony12@gmail.com', 
+                senha: 'Leoup1234', 
                 isAdmin: true, 
-                userName: 'Administrador Principal', // Nome do admin
+                userName: 'Robben Anthony', // Seu nome de exibição
                 teamName: 'Administrador', 
                 series: null, 
                 logo: 'https://i.imgur.com/uG7b3K8.png', 
@@ -326,14 +326,13 @@
             }
         };
         // Aqui não criamos mais times, pois eles serão vinculados manualmente pelo admin.
-        // A lista de `teamData` serve apenas como referência para a vinculação.
         return users;
     }
 
     // --- Data Storage (Simulação de DB com localStorage) ---
     let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || initializeTeamData();
     let posts = JSON.parse(localStorage.getItem('superligaPosts')) || [
-        { author: 'Administrador Principal', content: 'Bem-vindo à nova SUPERLIGA! O administrador deve vincular os times aos usuários no painel de gestão.', date: new Date().toLocaleDateString('pt-BR'), image: null, authorPic: 'https://i.imgur.com/uG7b3K8.png' }
+        { author: 'Robben Anthony', content: 'Bem-vindo à nova SUPERLIGA! O administrador deve vincular os times aos usuários no painel de gestão.', date: new Date().toLocaleDateString('pt-BR'), image: null, authorPic: 'https://i.imgur.com/uG7b3K8.png' }
     ];
 
     // --- Funções de Ajuda e Inicialização ---
@@ -398,13 +397,27 @@
         const postForm = document.getElementById('post-form-container');
 
         if (user) {
-            loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].userName || usuariosCadastrados[user].teamName})`;
-            loginBtn.onclick = fazerLogout;
             if (usuariosCadastrados[user].isAdmin) {
                 adminBtn.style.display = 'inline-block';
+                
+                // Botão principal vira Painel Admin para o administrador
+                loginBtn.textContent = `PAINEL ADMIN (${usuariosCadastrados[user].userName})`;
+                loginBtn.onclick = openAdminPanel; 
+                loginBtn.style.background = '#ff004c'; // Cor de destaque para Admin Panel
+
+                // Botão secundário vira Logout
+                adminBtn.onclick = fazerLogout;
+                adminBtn.textContent = `LOGOUT`;
+                adminBtn.style.background = '#f2c94c'; // Cor padrão para Logout
+                adminBtn.style.display = 'inline-block';
+
             } else {
+                loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].userName || usuariosCadastrados[user].teamName})`;
+                loginBtn.onclick = fazerLogout;
+                loginBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'none';
             }
+            
             postForm.style.display = 'block';
 
         } else {
@@ -412,6 +425,7 @@
             loginBtn.onclick = openLogin;
             adminBtn.style.display = 'none';
             postForm.style.display = 'none';
+            loginBtn.style.background = '#f2c94c';
         }
     }
 
@@ -419,7 +433,10 @@
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
 
-        const userFound = Object.keys(usuariosCadastrados).find(key => key === user || usuariosCadastrados[key].email === user);
+        // Encontra o usuário pela chave (username) ou pelo email
+        const userFound = Object.keys(usuariosCadastrados).find(key => 
+            key === user || usuariosCadastrados[key].email === user
+        );
 
         if (userFound && usuariosCadastrados[userFound].senha === pass) {
             loggedInUser = userFound;
@@ -427,6 +444,7 @@
             closeLogin();
             updateHeaderButtons(loggedInUser);
             alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
+            renderFeed(); // Atualiza o feed para mostrar opções de admin se for o caso
         } else {
             alert('❌ Credenciais incorretas. Verifique seu Usuário/E-mail e Senha.');
         }
@@ -437,6 +455,7 @@
         localStorage.removeItem('loggedInUser'); 
         updateHeaderButtons(null);
         alert('Você foi desconectado(a) com sucesso.');
+        renderFeed(); // Garante que a opção de postagem desapareça
     }
 
     function fazerCadastro() {
@@ -709,14 +728,14 @@
         adminList.innerHTML = '';
         // Filtra apenas usuários que não são Admin
         const users = Object.keys(usuariosCadastrados)
-            .filter(u => u !== 'admin')
+            .filter(u => !usuariosCadastrados[u].isAdmin)
             .map(u => ({ username: u, ...usuariosCadastrados[u] }))
             .sort((a, b) => (a.userName || '').localeCompare(b.userName || ''));
         
         const availableTeams = getAllAvailableTeams();
 
         if (users.length === 0) {
-            adminList.innerHTML = '<p style="color:#ccc;">Não há usuários/times para gerenciar.</p>';
+            adminList.innerHTML = '<p style="color:#ccc;">Não há usuários/times para gerenciar (apenas o administrador principal existe).</p>';
             return;
         }
 
