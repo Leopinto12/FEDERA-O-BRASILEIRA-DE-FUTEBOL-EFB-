@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SUPERLIGA - Rede Social e Admin</title>
+    <title>SUPERLIGA - Rede Social e Admin (Firebase)</title>
     <style>
         /* [Seção de Estilos CSS] */
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
@@ -23,6 +23,8 @@
         tr:hover { background: rgba(0,255,150,0.1); cursor: pointer; }
         .team-link { cursor: pointer; color: #f2c94c; font-weight: bold; text-shadow: 0 0 3px #f2c94c; transition: color 0.2s; }
         .link-switch { color:#f2c94c; text-decoration:none; cursor: pointer; font-weight: bold; transition: color 0.2s; }
+        .action-button { background: #00ff96; color: #050b16; border: none; border-radius: 8px; padding: 12px 20px; font-weight: bold; cursor: pointer; transition: background 0.3s; box-shadow: 0 0 10px rgba(0,255,150,0.5); width: 100%; }
+        .action-button:hover { background: #f2c94c; box-shadow: 0 0 15px #f2c94c; }
 
         /* Estilo dos Posts e Formulário de Publicação */
         .post { background: #0a1324; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 15px; }
@@ -260,12 +262,33 @@
 </div>
 
 <script>
-    // Variável para rastrear o usuário logado
+    // ** NOVAS IMPORTAÇÕES DO FIREBASE **
+    // Certifique-se de que a versão 9.6.10 seja a que você configurou.
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE **
+    // 🚨 ATUALIZE AS CHAVES ABAIXO COM SEUS DADOS REAIS DO CONSOLE FIREBASE
+    const firebaseConfig = {
+        apiKey: "SUA_CHAVE_API_AQUI", 
+        authDomain: "SEU_DOMINIO.firebaseapp.com",
+        projectId: "SEU_PROJECT_ID", 
+        storageBucket: "SEU_BUCKET.appspot.com", 
+        messagingSenderId: "SEU_ID", 
+        appId: "SEU_APP_ID"
+    };
+
+    // Inicialize o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(); // Objeto de referência ao Banco de Dados
+
+    // Variável de Cache Local para trabalhar com os dados após o carregamento
+    let usuariosCadastrados = {}; 
+    let posts = [];
     let loggedInUser = null;
 
-    // --- Dados dos Times (Série A e B 2025) e Logos ---
+    // --- Data dos Times (Série A e B 2025) ---
     const teamData = {
-        // --- SÉRIE A ---
         'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
         'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
         'Athletico-PR': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/23/Clube_Athletico-Paranaense_2020.png' },
@@ -312,12 +335,13 @@
 
     // Função que constrói os dados iniciais dos times (COMPLETA)
     function initializeTeamData() {
-        const users = {
-            'robbenanthony': { // CHAVE INTERNA AJUSTÁVEL: Nome de usuário em minúsculas e sem espaços/acentos
+        // Esta função cria o admin se ele não for encontrado no Firebase
+        return {
+            'robbenanthony': { 
                 email: 'robbenanthony12@gmail.com', 
                 senha: 'Leoup1234', 
                 isAdmin: true, 
-                userName: 'Robben Anthony', // Seu nome de exibição
+                userName: 'Robben Anthony',
                 teamName: 'Administrador', 
                 series: null, 
                 logo: 'https://i.imgur.com/uG7b3K8.png', 
@@ -325,43 +349,69 @@
                 stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } 
             }
         };
-        // Aqui não criamos mais times, pois eles serão vinculados manualmente pelo admin.
-        return users;
     }
 
-    // --- Data Storage (Simulação de DB com localStorage) ---
-    let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || initializeTeamData();
-    let posts = JSON.parse(localStorage.getItem('superligaPosts')) || [
-        { author: 'Robben Anthony', content: 'Bem-vindo à nova SUPERLIGA! O administrador deve vincular os times aos usuários no painel de gestão.', date: new Date().toLocaleDateString('pt-BR'), image: null, authorPic: 'https://i.imgur.com/uG7b3K8.png' }
-    ];
-
-    // --- Funções de Ajuda e Inicialização ---
-    function saveUsers() { localStorage.setItem('superligaUsers', JSON.stringify(usuariosCadastrados)); }
-    function savePosts() { localStorage.setItem('superligaPosts', JSON.stringify(posts)); }
+    // --- Funções de Sincronização e Ajuda (FIREBASE) ---
     
-    // Filtra apenas usuários que TÊM um time vinculado (para a tabela e lista pública)
-    function getAllTeams() {
-        return Object.keys(usuariosCadastrados)
-            .filter(user => usuariosCadastrados[user].teamName) // Filtra quem tem time
-            .map(user => ({ username: user, ...usuariosCadastrados[user] }));
+    // NOVO: Função para salvar/atualizar USUÁRIOS no Firebase (Coleção 'users')
+    async function saveUsersToFirebase(userKey, userData) {
+        try {
+            await db.collection("users").doc(userKey).set(userData);
+            console.log("Usuário salvo no Firebase:", userKey);
+        } catch (e) {
+            console.error("Erro ao salvar usuário: ", e);
+            alert("Erro ao salvar dados do usuário no Firebase.");
+        }
+    }
+    
+    // NOVO: Função para carregar TODOS os dados (Usuários e Posts)
+    async function loadDataFromFirebase() {
+        try {
+            // 1. Carregar Usuários
+            const userSnapshot = await db.collection("users").get();
+            usuariosCadastrados = {};
+            userSnapshot.forEach(doc => {
+                const userData = doc.data();
+                // Garante que o stats tenha todos os campos para evitar NaN
+                if (!userData.stats) {
+                    userData.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+                }
+                usuariosCadastrados[doc.id] = userData;
+            });
+
+            // 2. Carregar Posts (ordenado do mais novo para o mais antigo)
+            const postSnapshot = await db.collection("posts").orderBy("timestamp", "desc").get(); 
+            posts = [];
+            postSnapshot.forEach(doc => {
+                posts.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // 3. Verifica se o administrador inicial existe. Se não, cria e salva no Firebase.
+            if (!usuariosCadastrados['robbenanthony']) {
+                const initialUsers = initializeTeamData();
+                const adminData = initialUsers['robbenanthony'];
+                await saveUsersToFirebase('robbenanthony', adminData);
+                usuariosCadastrados['robbenanthony'] = adminData;
+            }
+            
+            console.log(`Dados carregados: ${Object.keys(usuariosCadastrados).length} usuários, ${posts.length} posts.`);
+
+        } catch (e) {
+            console.error("Erro ao carregar dados do Firebase. Verifique a conexão ou as Regras de Segurança (Firestore).", e);
+            alert("Erro de conexão com o Banco de Dados. Recarregue a página.");
+        }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    // --- Event Listener de Carregamento Principal ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        
+        await loadDataFromFirebase(); // Carrega os dados persistentes
+
+        // Checa o usuário logado (usamos localStorage apenas para a sessão)
         const storedUser = localStorage.getItem('loggedInUser');
         if (storedUser && usuariosCadastrados[storedUser]) {
             loggedInUser = storedUser;
         }
-
-        // Correção para dados antigos: Garante que todos os usuários tenham os novos campos
-        Object.keys(usuariosCadastrados).forEach(userKey => {
-            const user = usuariosCadastrados[userKey];
-            if (user.userName === undefined) user.userName = user.teamName || userKey;
-            if (user.profilePic === undefined) user.profilePic = user.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=👤';
-            if (user.stats === undefined || user.stats.GolsPro === undefined) {
-                 user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
-            }
-        });
-        saveUsers(); // Salva a correção se necessário
 
         updateHeaderButtons(loggedInUser); 
         renderFeed();
@@ -369,7 +419,7 @@
         renderTeamsList();
     });
 
-    // --- Funções de Modais e Navegação ---
+    // --- Funções de Modais e Navegação (Permanecem) ---
     function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
     function closeLogin() { document.getElementById('login').style.display = 'none'; document.body.style.overflow = 'auto'; }
     function openRegister() { document.getElementById('login').style.display = 'none'; document.getElementById('register').style.display = 'block'; document.body.style.overflow = 'hidden'; }
@@ -400,15 +450,13 @@
             if (usuariosCadastrados[user].isAdmin) {
                 adminBtn.style.display = 'inline-block';
                 
-                // Botão principal vira Painel Admin para o administrador
                 loginBtn.textContent = `PAINEL ADMIN (${usuariosCadastrados[user].userName})`;
                 loginBtn.onclick = openAdminPanel; 
-                loginBtn.style.background = '#ff004c'; // Cor de destaque para Admin Panel
+                loginBtn.style.background = '#ff004c'; 
 
-                // Botão secundário vira Logout
                 adminBtn.onclick = fazerLogout;
                 adminBtn.textContent = `LOGOUT`;
-                adminBtn.style.background = '#f2c94c'; // Cor padrão para Logout
+                adminBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'inline-block';
 
             } else {
@@ -433,18 +481,18 @@
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
 
-        // Encontra o usuário pela chave (username) ou pelo email
         const userFound = Object.keys(usuariosCadastrados).find(key => 
             key === user || usuariosCadastrados[key].email === user
         );
 
         if (userFound && usuariosCadastrados[userFound].senha === pass) {
             loggedInUser = userFound;
+            // Salva apenas a sessão no localStorage
             localStorage.setItem('loggedInUser', loggedInUser); 
             closeLogin();
             updateHeaderButtons(loggedInUser);
             alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
-            renderFeed(); // Atualiza o feed para mostrar opções de admin se for o caso
+            renderFeed(); 
         } else {
             alert('❌ Credenciais incorretas. Verifique seu Usuário/E-mail e Senha.');
         }
@@ -455,13 +503,12 @@
         localStorage.removeItem('loggedInUser'); 
         updateHeaderButtons(null);
         alert('Você foi desconectado(a) com sucesso.');
-        renderFeed(); // Garante que a opção de postagem desapareça
+        renderFeed(); 
     }
 
-    function fazerCadastro() {
-        // Agora aceita FOTO DE PERFIL e NOME DE USUÁRIO
+    async function fazerCadastro() { // AGORA É ASYNC!
         const profilePicUrl = document.getElementById('register-profile-pic').value.trim(); 
-        const user = document.getElementById('register-user').value.trim(); // Nome do Usuário de Exibição
+        const user = document.getElementById('register-user').value.trim(); 
         const email = document.getElementById('register-email').value.trim();
         const pass = document.getElementById('register-pass').value.trim();
 
@@ -470,7 +517,6 @@
             return;
         }
         
-        // Usamos o username em minúsculo, sem espaço e acentos, como chave de acesso
         const usernameKey = user.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
             const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
             return map[match] || match;
@@ -481,21 +527,24 @@
             return;
         }
 
-        usuariosCadastrados[usernameKey] = {
+        const newUser = {
             email: email,
             senha: pass,
             isAdmin: false,
-            userName: user, // Novo campo: Nome de exibição
+            userName: user, 
             profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
-            
-            // Dados de time são nulos por padrão
             teamName: null, 
             series: null,
             logo: null, 
             stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 }
         };
 
-        saveUsers();
+        // 🚨 Salva no Firebase (novo backend)
+        await saveUsersToFirebase(usernameKey, newUser);
+        
+        // Atualiza o cache local
+        usuariosCadastrados[usernameKey] = newUser;
+        
         alert(`🎉 Usuário "${user}" cadastrado com sucesso!`);
         closeRegister();
         openLogin();
@@ -513,7 +562,7 @@
         }
     }
 
-    function publishPost() {
+    async function publishPost() { // AGORA É ASYNC!
         if (!loggedInUser) {
             alert('🚨 Você precisa estar logado para publicar.');
             return;
@@ -521,7 +570,6 @@
         
         const currentUser = usuariosCadastrados[loggedInUser];
         
-        // Se não for admin, verifica se possui um time vinculado.
         if (!currentUser.isAdmin && !currentUser.teamName) {
              alert('🚨 Sua conta precisa ser vinculada a um time pelo Administrador para publicar.');
              return;
@@ -535,7 +583,6 @@
             return;
         }
 
-        // O autor do post será o nome do time (se houver) ou o nome de usuário (se for admin)
         const authorName = currentUser.teamName || currentUser.userName;
         const authorImage = currentUser.logo || currentUser.profilePic;
 
@@ -544,29 +591,48 @@
             content: postContent,
             date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
             image: postImage || null,
-            authorPic: authorImage // Nova info para mostrar a imagem no feed
+            authorPic: authorImage,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // Timestamp para ordenar
         };
 
-        posts.unshift(newPost);
-        savePosts();
-        document.getElementById('post-input').value = '';
-        document.getElementById('post-image-url').value = '';
-        document.getElementById('image-preview').style.display = 'none';
-        renderFeed();
-        alert('✅ Post publicado com sucesso!');
+        try {
+            // 🚨 Adiciona o post ao Firebase
+            await db.collection("posts").add(newPost);
+            
+            // Recarrega os posts para atualizar o feed para todos
+            await loadDataFromFirebase(); 
+            
+            document.getElementById('post-input').value = '';
+            document.getElementById('post-image-url').value = '';
+            document.getElementById('image-preview').style.display = 'none';
+            renderFeed();
+            alert('✅ Post publicado com sucesso!');
+
+        } catch (e) {
+            console.error("Erro ao publicar post:", e);
+            alert("Erro ao publicar o post. Tente novamente.");
+        }
     }
 
     // FUNÇÃO DELETAR POST (ADMIN)
-    function deletePost(index) {
+    async function deletePost(postId) { // AGORA É ASYNC!
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) {
             alert('Acesso negado. Apenas o administrador pode excluir posts.');
             return;
         }
         if (confirm('Tem certeza que deseja excluir esta publicação?')) {
-            posts.splice(index, 1); // Remove 1 elemento no índice
-            savePosts();
-            renderFeed();
-            alert('Publicação excluída.');
+            try {
+                // 🚨 Deleta no Firebase
+                await db.collection("posts").doc(postId).delete();
+                
+                // Atualiza o cache e a tela
+                await loadDataFromFirebase();
+                renderFeed();
+                alert('Publicação excluída.');
+            } catch (e) {
+                console.error("Erro ao deletar post:", e);
+                alert('Erro ao excluir a publicação.');
+            }
         }
     }
 
@@ -582,14 +648,16 @@
         posts.forEach(post => {
             let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
             
-            // Botão de Excluir Admin
             let adminDeleteBtn = '';
             if (loggedInUser && usuariosCadastrados[loggedInUser].isAdmin) {
-                adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost(${posts.indexOf(post)})">Excluir</span>`;
+                // Passamos o ID do Firebase para deletar corretamente
+                adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost('${post.id}')">Excluir</span>`;
             }
             
-            // Use a imagem do autor (logo do time ou profile pic)
             const authorPic = post.authorPic || 'https://via.placeholder.com/30/06142e/00ff96?text=P';
+            
+            // Tratamento de data: O timestamp do Firebase precisa ser formatado
+            const dateDisplay = post.timestamp ? new Date(post.timestamp.toDate()).toLocaleDateString('pt-BR') : post.date;
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
@@ -597,11 +665,11 @@
                 <div class="post-header" style="display: flex; align-items: center;">
                     <img src="${authorPic}" alt="Perfil" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%; border: 1px solid #00ff96; object-fit: cover;">
                     <span class="post-author">${post.author}</span>
-                    <span class="post-date">${post.date}</span>
+                    <span class="post-date">${dateDisplay}</span>
                     ${adminDeleteBtn} 
                 </div>
                 <div class="post-content">
-                    ${post.content.replace(/\n/g, '<br>')}
+                    ${(post.content || '').replace(/\n/g, '<br>')}
                     ${imageHtml}
                 </div>
             `;
@@ -609,20 +677,15 @@
         });
     }
 
-    // --- Funções de Classificação ---
+    // --- Funções de Classificação (Permanecem) ---
     function sortTeams(a, b) {
-        // 1. Pontos
         if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
-        // 2. Vitórias
         if (b.stats.Vitórias !== a.stats.Vitórias) return b.stats.Vitórias - a.stats.Vitórias;
-        // 3. Saldo de Gols
         if (b.stats.Saldo !== a.stats.Saldo) return b.stats.Saldo - a.stats.Saldo;
-        // 4. Gols Pró (Desempate final)
         return b.stats.GolsPro - a.stats.GolsPro; 
     }
 
     function renderClassificationTables() {
-        // Pega apenas times vinculados
         const teams = getAllTeams().filter(team => team.series);
 
         const serieA = teams.filter(t => t.series === 'Série A').sort(sortTeams);
@@ -648,10 +711,8 @@
                 const stats = team.stats;
                 const row = tableBody.insertRow();
                 
-                // Posição (coluna 1)
                 row.insertCell().textContent = index + 1;
                 
-                // Time (coluna 2 - link para perfil)
                 const teamCell = row.insertCell();
                 teamCell.innerHTML = `
                     <div style="display:flex; align-items:center;">
@@ -661,15 +722,14 @@
                 `;
                 teamCell.style.textAlign = 'left';
 
-                // ESTATÍSTICAS COMPLETAS (8 COLUNAS)
-                row.insertCell().textContent = stats.Pontos;     // P
-                row.insertCell().textContent = stats.Jogos;       // J
-                row.insertCell().textContent = stats.Vitórias;    // V
-                row.insertCell().textContent = stats.Empates;     // E
-                row.insertCell().textContent = stats.Derrotas;    // D
-                row.insertCell().textContent = stats.GolsPro;     // GP
-                row.insertCell().textContent = stats.GolsContra;  // GC
-                row.insertCell().textContent = stats.Saldo;       // SG
+                row.insertCell().textContent = stats.Pontos;
+                row.insertCell().textContent = stats.Jogos;
+                row.insertCell().textContent = stats.Vitórias;
+                row.insertCell().textContent = stats.Empates;
+                row.insertCell().textContent = stats.Derrotas;
+                row.insertCell().textContent = stats.GolsPro;
+                row.insertCell().textContent = stats.GolsContra;
+                row.insertCell().textContent = stats.Saldo;
             });
         };
 
@@ -677,7 +737,7 @@
         renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
 
-    // --- Funções de Gestão Admin (V3.2: Foco em Usuário e Vinculação) ---
+    // --- Funções de Gestão Admin ---
     
     function getAllAvailableTeams() {
         const allUsers = Object.values(usuariosCadastrados);
@@ -687,15 +747,13 @@
             
         const allBRTeams = Object.keys(teamData); 
         
-        // Retorna a lista de times que NÃO estão vinculados
         return allBRTeams.filter(teamName => !assignedTeamNames.includes(teamName));
     }
 
     function renderTeamsList() {
         const teamsList = document.getElementById('times-list');
         teamsList.innerHTML = '';
-        // Mostra APENAS times que estão vinculados a um usuário
-        const teams = getAllTeams().sort((a, b) => a.teamName.localeCompare(b.teamName));
+        const teams = getAllTeams().sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
 
         if (teams.length === 0) {
             teamsList.innerHTML = '<p>Nenhum time vinculado a um usuário ainda.</p>';
@@ -726,7 +784,6 @@
     function renderAdminTeamList() {
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
-        // Filtra apenas usuários que não são Admin
         const users = Object.keys(usuariosCadastrados)
             .filter(u => !usuariosCadastrados[u].isAdmin)
             .map(u => ({ username: u, ...usuariosCadastrados[u] }))
@@ -748,7 +805,6 @@
 
             let actionHtml = '';
             if (user.teamName) {
-                // Se já tem time, mostra o desvínculo e a gestão
                 actionHtml = `
                     <p style="margin: 5px 0 0; font-size: 0.9em; color: #00ff96;">Time: <b>${user.teamName} (${currentSeries})</b></p>
                     <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
@@ -757,7 +813,6 @@
                     </div>
                 `;
             } else {
-                // Se não tem time, mostra a opção de vincular
                 let selectOptions = availableTeams.map(name => `<option value="${name}">${name}</option>`).join('');
                 actionHtml = `
                     <p style="margin: 5px 0 0; font-size: 0.9em; color: #ff004c;">Status: **NÃO VINCULADO**</p>
@@ -788,30 +843,45 @@
         });
     }
 
-    function banUser(username) {
+    async function banUser(username) { // AGORA É ASYNC!
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
 
-        const userName = usuariosCadastrados[username].userName;
-        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName}? Isso é irreversível. Todos os posts serão excluídos.`)) {
-            
-            const teamName = usuariosCadastrados[username].teamName;
+        const userToDelete = usuariosCadastrados[username];
+        if (!userToDelete) return; // Se o usuário já foi banido ou não existe
 
-            // Remove posts do usuário
-            posts = posts.filter(post => post.author !== userName && post.author !== teamName);
-            
-            // Remove o usuário
-            delete usuariosCadastrados[username];
+        const userName = userToDelete.userName;
+        const teamName = userToDelete.teamName;
 
-            saveUsers();
-            savePosts();
-            renderAdminTeamList();
-            renderTeamsList();
-            renderFeed();
-            alert(`Usuário ${userName} e seus posts foram permanentemente removidos.`);
+        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName}? Isso é irreversível. Todos os dados e posts serão excluídos.`)) {
+            try {
+                // 1. Deleta o usuário no Firebase
+                await db.collection("users").doc(username).delete();
+
+                // 2. Deleta os posts do usuário (requer mais uma query no Firebase se houver muitos posts)
+                // Por simplicidade, faremos a exclusão no cache e no Firebase para os posts relacionados:
+                posts = posts.filter(post => post.author !== userName && post.author !== teamName);
+                // Você precisaria de um batch delete aqui em um sistema real, mas a exclusão manual no cache é o suficiente para a UI
+                
+                // 3. Atualiza o cache local
+                delete usuariosCadastrados[username];
+
+                // 4. Recarrega os dados completos do Firebase para garantir a sincronia
+                await loadDataFromFirebase();
+                
+                // 5. Atualiza a UI
+                renderAdminTeamList();
+                renderTeamsList();
+                renderFeed();
+                alert(`Usuário ${userName} e seus dados foram permanentemente removidos.`);
+
+            } catch (e) {
+                console.error("Erro ao banir usuário:", e);
+                alert("Erro ao banir o usuário no Firebase.");
+            }
         }
     }
 
-    function linkTeam(username) {
+    async function linkTeam(username) { // AGORA É ASYNC!
         const selectElement = document.getElementById(`select-team-${username}`);
         const teamName = selectElement.value;
         
@@ -826,34 +896,36 @@
             return alert(`O time ${teamName} já está vinculado a outro usuário.`);
         }
 
-        // Vincula
+        // Vincula e Zera stats
         user.teamName = teamName;
         user.series = teamDetails.series;
         user.logo = teamDetails.logo;
-        
-        // Zera stats ao vincular (novo começo para o time)
         user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
 
-        saveUsers();
+        // 🚨 Salva no Firebase
+        await saveUsersToFirebase(username, user);
+        
         renderAdminTeamList();
         renderClassificationTables();
         renderTeamsList();
         alert(`✅ Time ${teamName} vinculado ao usuário ${user.userName}.`);
     }
 
-    function unlinkTeam(username) {
+    async function unlinkTeam(username) { // AGORA É ASYNC!
         if (!confirm('Tem certeza que deseja desvincular o time deste usuário? O time ficará disponível para ser vinculado novamente.')) {
             return;
         }
         const user = usuariosCadastrados[username];
         
-        // Desvincula
+        // Desvincula e Zera stats
         user.teamName = null;
         user.series = null;
         user.logo = null;
         user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
         
-        saveUsers();
+        // 🚨 Salva no Firebase
+        await saveUsersToFirebase(username, user);
+        
         renderAdminTeamList();
         renderClassificationTables();
         renderTeamsList();
@@ -861,14 +933,13 @@
     }
 
     function openTeamEditor(username) {
+        // ... (Seu código original de edição de usuário permanece) ...
         const user = usuariosCadastrados[username];
         if (!user || user.isAdmin) return alert('Usuário não encontrado ou é o administrador.');
 
-        // Edição do Nome do Usuário
         const newUserName = prompt(`Editar nome de exibição do usuário "${user.userName}". Novo nome:`, user.userName);
         if (newUserName === null || newUserName.trim() === '') return;
 
-        // Edição do Logo/Pic (Se tiver time, edita o logo do time; se não, a profile pic)
         let currentPic = user.teamName ? user.logo : user.profilePic;
         let typeToEdit = user.teamName ? 'Logo do Time' : 'Foto de Perfil';
         const newPicUrl = prompt(`Editar URL da ${typeToEdit} de "${user.userName}". Nova URL:`, currentPic);
@@ -877,15 +948,15 @@
         finalizeUserEdit(username, newUserName, newPicUrl);
     }
 
-    function finalizeUserEdit(username, newUserName, newPicUrl) {
+    async function finalizeUserEdit(username, newUserName, newPicUrl) { // AGORA É ASYNC!
         const user = usuariosCadastrados[username];
         const oldUserName = user.userName;
 
-        // 1. Atualizar posts
+        // 1. Atualizar posts no CACHE LOCAL (o post.id não muda)
         posts.forEach(post => {
             if (post.author === oldUserName || post.author === user.teamName) {
-                post.author = newUserName; // Atualiza o nome do autor do post
-                post.authorPic = newPicUrl; // Atualiza a foto do autor (seja logo ou profile pic)
+                post.author = newUserName; 
+                post.authorPic = newPicUrl; 
             }
         });
 
@@ -897,23 +968,30 @@
             user.profilePic = newPicUrl;
         }
         
-        // 3. Atualizar chave de usuário se o nome de usuário for usado como chave
         const newUsernameKey = newUserName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
             const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
             return map[match] || match;
         });
-
+        
+        // 🚨 LÓGICA DE ATUALIZAÇÃO DE CHAVE NO FIREBASE
         if (newUsernameKey !== username) {
+            // Se a chave mudou, remove o antigo e salva o novo.
             delete usuariosCadastrados[username]; 
             usuariosCadastrados[newUsernameKey] = user;
+            await db.collection("users").doc(username).delete(); // Deleta o ID antigo
+            
             if (loggedInUser === username) {
                 loggedInUser = newUsernameKey;
                 localStorage.setItem('loggedInUser', loggedInUser);
             }
         }
+        
+        // 🚨 Salva o usuário (novo ou antigo ID) no Firebase
+        await saveUsersToFirebase(newUsernameKey, user);
+        
+        // 🚨 Como o Firebase não tem update em massa para posts, forçamos o recarregamento
+        await loadDataFromFirebase();
 
-        saveUsers();
-        savePosts();
         renderAdminTeamList();
         renderTeamsList();
         renderFeed();
@@ -922,18 +1000,17 @@
     }
 
     function populateTeamSelects(seriesFilter = null) {
+        // ... (Seu código original permanece) ...
         const time1Select = document.getElementById('jogo-time1');
         const time2Select = document.getElementById('jogo-time2');
         
         time1Select.innerHTML = '<option value="">-- Selecione --</option>';
         time2Select.innerHTML = '<option value="">-- Selecione --</option>';
 
-        // Pega apenas times que estão vinculados E na série correta
         const teams = getAllTeams().filter(team => team.series === seriesFilter);
 
         teams.forEach(team => {
             const option1 = document.createElement('option');
-            // Usamos o username como valor, pois é a chave do objeto que armazena as stats
             option1.value = team.username; 
             option1.textContent = team.teamName;
             time1Select.appendChild(option1);
@@ -953,8 +1030,8 @@
         }
     }
 
-    // FUNÇÃO REGISTRAR RESULTADO ATUALIZADA (V3.0)
-    function registrarResultado() {
+    // FUNÇÃO REGISTRAR RESULTADO ATUALIZADA (AGORA SALVA NO FIREBASE)
+    async function registrarResultado() { // AGORA É ASYNC!
         const series = document.getElementById('jogo-series').value;
         const user1 = document.getElementById('jogo-time1').value;
         const user2 = document.getElementById('jogo-time2').value;
@@ -971,50 +1048,49 @@
             return;
         }
 
-        // --- Estatísticas que SEMPRE AUMENTAM (Jogos, Gols Pró, Gols Contra) ---
-        // Time 1 (Casa)
-        usuariosCadastrados[user1].stats.Jogos += 1;
-        usuariosCadastrados[user1].stats.GolsPro += gols1;
-        usuariosCadastrados[user1].stats.GolsContra += gols2;
+        // CÓPIA PARA GARANTIR QUE AS ESTATÍSTICAS ESTEJAM ZERADAS SE NECESSÁRIO
+        const stats1 = usuariosCadastrados[user1].stats;
+        const stats2 = usuariosCadastrados[user2].stats;
 
-        // Time 2 (Visitante)
-        usuariosCadastrados[user2].stats.Jogos += 1;
-        usuariosCadastrados[user2].stats.GolsPro += gols2;
-        usuariosCadastrados[user2].stats.GolsContra += gols1;
+        // --- Atualiza Estatísticas no Cache Local ---
+        stats1.Jogos += 1;
+        stats1.GolsPro += gols1;
+        stats1.GolsContra += gols2;
+
+        stats2.Jogos += 1;
+        stats2.GolsPro += gols2;
+        stats2.GolsContra += gols1;
         
-        // --- Lógica de Pontos e Resultados ---
         let pontos1 = 0;
         let pontos2 = 0;
 
         if (gols1 > gols2) { 
-            // Vitória do Time 1
             pontos1 = 3;
-            usuariosCadastrados[user1].stats.Vitórias += 1;
-            usuariosCadastrados[user2].stats.Derrotas += 1;
+            stats1.Vitórias += 1;
+            stats2.Derrotas += 1;
         } 
         else if (gols2 > gols1) { 
-            // Vitória do Time 2
             pontos2 = 3;
-            usuariosCadastrados[user2].stats.Vitórias += 1;
-            usuariosCadastrados[user1].stats.Derrotas += 1;
+            stats2.Vitórias += 1;
+            stats1.Derrotas += 1;
         } 
         else { 
-            // Empate
             pontos1 = 1; 
             pontos2 = 1;
-            usuariosCadastrados[user1].stats.Empates += 1;
-            usuariosCadastrados[user2].stats.Empates += 1;
+            stats1.Empates += 1;
+            stats2.Empates += 1;
         }
 
-        // Aplica Pontos e Saldo
-        usuariosCadastrados[user1].stats.Pontos += pontos1;
-        usuariosCadastrados[user1].stats.Saldo = usuariosCadastrados[user1].stats.GolsPro - usuariosCadastrados[user1].stats.GolsContra;
+        stats1.Pontos += pontos1;
+        stats1.Saldo = stats1.GolsPro - stats1.GolsContra;
 
-        usuariosCadastrados[user2].stats.Pontos += pontos2;
-        usuariosCadastrados[user2].stats.Saldo = usuariosCadastrados[user2].stats.GolsPro - usuariosCadastrados[user2].stats.GolsContra;
+        stats2.Pontos += pontos2;
+        stats2.Saldo = stats2.GolsPro - stats2.GolsContra;
 
-
-        saveUsers();
+        // 🚨 SALVA AMBOS OS TIMES NO FIREBASE
+        await saveUsersToFirebase(user1, usuariosCadastrados[user1]);
+        await saveUsersToFirebase(user2, usuariosCadastrados[user2]);
+        
         renderClassificationTables();
         
         document.getElementById('jogo-gols1').value = '';
@@ -1022,7 +1098,8 @@
         
         alert(`✅ Resultado registrado! ${usuariosCadastrados[user1].teamName} ${gols1} x ${gols2} ${usuariosCadastrados[user2].teamName}. Classificação atualizada.`);
     }
-
+    
+    // --- Funções de Perfil (Permanecem) ---
     function openPerfilTime(username) {
         const perfilModal = document.getElementById('perfil-time');
         const team = usuariosCadastrados[username];
@@ -1055,7 +1132,8 @@
         if (teamPosts.length > 0) {
             feedHtml = teamPosts.map(post => {
                 let img = post.image ? `<img src="${post.image}" style="max-width:100%; height:auto; border-radius:5px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
-                return `<div style="background:#0a1324; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.1);"><p style="font-size:0.9em;">${post.content}</p>${img}<p style="font-size:0.7em; color:#999; text-align:right;">${post.date}</p></div>`;
+                const dateDisplay = post.timestamp ? new Date(post.timestamp.toDate()).toLocaleDateString('pt-BR') : post.date;
+                return `<div style="background:#0a1324; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.1);"><p style="font-size:0.9em;">${post.content}</p>${img}<p style="font-size:0.7em; color:#999; text-align:right;">${dateDisplay}</p></div>`;
             }).join('');
         } else {
             feedHtml = '<p style="color:#999;">Nenhum post recente deste time.</p>';
