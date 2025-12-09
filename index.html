@@ -17,8 +17,8 @@
         .card { background: rgba(255,255,255,0.08); border: 1px solid rgba(0,255,150,0.5); padding: 25px; border-radius: 16px; margin-bottom: 35px; box-shadow: 0 0 15px rgba(0,255,150,0.3); transition: transform 0.3s ease; }
         .title { font-size: 2rem; margin-bottom: 20px; color: #00ff96; text-shadow: 0 0 10px #00ff96; border-bottom: 2px dashed rgba(0,255,150,0.4); padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.05rem; }
-        th, td { padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); }
-        th { background: rgba(0,255,150,0.25); color: #ffffff; font-size: 1.15rem; text-transform: uppercase; }
+        th, td { padding: 15px 5px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        th { background: rgba(0,255,150,0.25); color: #ffffff; font-size: 0.95rem; text-transform: uppercase; }
         tr:nth-child(even) { background: rgba(255,255,255,0.02); }
         tr:hover { background: rgba(0,255,150,0.1); cursor: pointer; }
         .team-link { cursor: pointer; color: #f2c94c; font-weight: bold; text-shadow: 0 0 3px #f2c94c; transition: color 0.2s; }
@@ -120,7 +120,7 @@
             <div class="title">🏆 Série A — Classificação</div>
             <p id="series-a-status">Nenhum time na Série A.</p>
             <table id="tabela-serie-a" style="display:none;">
-                <thead><tr><th>Time</th><th>Pontos</th><th>Vitórias</th><th>Saldo</th></tr></thead>
+                <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -129,7 +129,7 @@
             <div class="title">💠 Série B — Classificação</div>
             <p id="series-b-status">Nenhum time na Série B.</p>
             <table id="tabela-serie-b" style="display:none;">
-                <thead><tr><th>Time</th><th>Pontos</th><th>Vitórias</th><th>Saldo</th></tr></thead>
+                 <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -303,14 +303,13 @@
         'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
     };
 
-    // Função que constrói os dados iniciais dos times
+    // Função que constrói os dados iniciais dos times (ATUALIZADA com todas as stats)
     function initializeTeamData() {
         const users = {
-            'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }, logo: 'https://i.imgur.com/uG7b3K8.png' }
+            'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, logo: 'https://i.imgur.com/uG7b3K8.png', stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } }
         };
 
         for (const teamName in teamData) {
-            // Normalização do nome do time para ser um username simples
             const username = teamName.toLowerCase().replace(/\s/g, '').replace(/-/g, '').replace(/[áéíóúãõç]/g, match => {
                 const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
                 return map[match] || match;
@@ -323,7 +322,17 @@
                 teamName: teamName,
                 series: teamData[teamName].series,
                 logo: teamData[teamName].logo,
-                stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }
+                // NOVO OBJETO DE ESTATÍSTICAS COMPLETO
+                stats: { 
+                    Pontos: 0, 
+                    Jogos: 0, 
+                    Vitórias: 0, 
+                    Empates: 0, 
+                    Derrotas: 0, 
+                    GolsPro: 0, 
+                    GolsContra: 0, 
+                    Saldo: 0 
+                }
             };
         }
         return users;
@@ -363,13 +372,11 @@
     function closeRegister() { document.getElementById('register').style.display = 'none'; document.body.style.overflow = 'auto'; }
     function closePerfilTime() { document.getElementById('perfil-time').style.display = 'none'; document.body.style.overflow = 'auto'; }
     
-    // --- FUNÇÃO DE FECHAMENTO DO ADMIN PANEL ---
     function fecharPainelAdmin() {
         document.getElementById('admin-panel').style.display = 'none';
         document.body.style.overflow = 'auto';
     }
     
-    // --- FUNÇÃO DE ABERTURA DO ADMIN PANEL ---
     function openAdminPanel() {
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) { alert('Acesso negado.'); return; }
         renderAdminTeamList();
@@ -379,7 +386,7 @@
     }
 
 
-    // --- Funções de Login e Cadastro (ATUALIZADA PARA LOGO) ---
+    // --- Funções de Login e Cadastro ---
     function updateHeaderButtons(user) {
         const loginBtn = document.getElementById('header-login-button');
         const adminBtn = document.getElementById('admin-panel-button');
@@ -428,7 +435,6 @@
     }
 
     function fazerCadastro() {
-        // NOVO: Coleta a URL do logo
         const logoUrl = document.getElementById('register-logo').value.trim(); 
         const user = document.getElementById('register-user').value.trim();
         const email = document.getElementById('register-email').value.trim();
@@ -453,9 +459,9 @@
             isAdmin: false,
             teamName: user,
             series: null,
-            // LOGO GENÉRICA SE NENHUMA URL FOR FORNECIDA
             logo: logoUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=NOVO', 
-            stats: { Pontos: 0, Vitórias: 0, Saldo: 0 } 
+            // NOVO OBJETO DE ESTATÍSTICAS COMPLETO
+            stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 }
         };
 
         saveUsers();
@@ -464,660 +470,190 @@
         openLogin();
     }
     
-    // --- Funções de Feed, Classificação e Admin (Mantidas) ---
-    // (Omitidas por brevidade, mas estão completas no arquivo final)
-    
-    function showImagePreview(url) { /* ... */ }
-    function publishPost() { /* ... */ }
-    function renderFeed() { /* ... */ }
-    function renderClassificationTables() { /* ... */ }
-    function renderTeamsList() { /* ... */ }
-    function renderAdminTeamList() { /* ... */ }
-    function changeTeamSeries(username, newSeries) { /* ... */ }
-    function populateTeamSelects(seriesFilter = null) { /* ... */ }
-    function filterTeamsBySeries(series) { /* ... */ }
-    function registrarResultado() { /* ... */ }
-    function openPerfilTime(username) { /* ... */ }
+    // --- Funções de Feed ---
+    function showImagePreview(url) {
+        const imgPreview = document.getElementById('image-preview');
+        if (url) {
+            imgPreview.src = url;
+            imgPreview.style.display = 'block';
+        } else {
+            imgPreview.style.display = 'none';
+            imgPreview.src = '';
+        }
+    }
 
+    function publishPost() {
+        if (!loggedInUser || usuariosCadastrados[loggedInUser].isAdmin) {
+            alert('🚨 Somente times podem publicar posts no Feed.');
+            return;
+        }
+        const postContent = document.getElementById('post-input').value.trim();
+        const postImage = document.getElementById('post-image-url').value.trim();
 
-    // --- Funções Omitidas para Redução de Texto, mas presentes no arquivo final ---
-    function renderAdminTeamList() {
-        const adminList = document.getElementById('admin-teams-list');
-        adminList.innerHTML = '';
-        const teams = getAllTeams();
-
-        if (teams.length === 0) {
-            adminList.innerHTML = '<p style="color:#ccc;">Não há times para gerenciar.</p>';
+        if (!postContent && !postImage) {
+            alert('🚨 Por favor, escreva algo ou forneça uma URL de imagem para publicar.');
             return;
         }
 
-        teams.forEach(team => {
-            const currentSeries = team.series || 'Nenhuma';
-            const teamElement = document.createElement('div');
-            teamElement.style.cssText = 'background: #0a1324; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #00ff96; display: flex; justify-content: space-between; align-items: center;';
-
-            teamElement.innerHTML = `
-                <div style="display: flex; align-items: center;">
-                    <img src="${team.logo}" alt="Logo" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;">
-                    <div>
-                        <strong style="color: #00ff96;">${team.teamName}</strong> (Usuário: ${team.username})
-                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
-                    </div>
-                </div>
-                <select id="select-${team.username}" onchange="changeTeamSeries('${team.username}', this.value)">
-                    <option value="Nenhuma" ${currentSeries === 'Nenhuma' || !currentSeries ? 'selected' : ''}>Nenhuma</option>
-                    <option value="Série A" ${currentSeries === 'Série A' ? 'selected' : ''}>Série A</option>
-                    <option value="Série B" ${currentSeries === 'Série B' ? 'selected' : ''}>Série B</option>
-                </select>
-            `;
-            adminList.appendChild(teamElement);
-        });
-    }
-
-    function changeTeamSeries(username, newSeries) {
-        if (newSeries === 'Nenhuma') {
-            usuariosCadastrados[username].series = null;
-        } else {
-            usuariosCadastrados[username].series = newSeries;
-            if (!usuariosCadastrados[username].stats) {
-                 usuariosCadastrados[username].stats = { Pontos: 0, Vitórias: 0, Saldo: 0 };
-            }
-        }
-        saveUsers();
-        alert(`Time ${usuariosCadastrados[username].teamName} alocado para ${newSeries}.`);
-        renderAdminTeamList(); 
-    }
-
-    function populateTeamSelects(seriesFilter = null) {
-        const time1Select = document.getElementById('jogo-time1');
-        const time2Select = document.getElementById('jogo-time2');
-        
-        time1Select.innerHTML = '<option value="">-- Selecione --</option>';
-        time2Select.innerHTML = '<option value="">-- Selecione --</option>';
-
-        const teams = getAllTeams().filter(team => team.series === seriesFilter);
-
-        teams.forEach(team => {
-            const option1 = document.createElement('option');
-            option1.value = team.username;
-            option1.textContent = team.teamName;
-            time1Select.appendChild(option1);
-
-            const option2 = document.createElement('option');
-            option2.value = team.username;
-            option2.textContent = team.teamName;
-            time2Select.appendChild(option2);
-        });
-    }
-
-    function filterTeamsBySeries(series) {
-        if (series === 'Série A' || series === 'Série B') {
-            populateTeamSelects(series);
-        } else {
-            populateTeamSelects(null);
-        }
-    }
-
-    function registrarResultado() {
-        const series = document.getElementById('jogo-series').value;
-        const user1 = document.getElementById('jogo-time1').value;
-        const user2 = document.getElementById('jogo-time2').value;
-        const gols1 = parseInt(document.getElementById('jogo-gols1').value);
-        const gols2 = parseInt(document.getElementById('jogo-gols2').value);
-
-        if (!series || !user1 || !user2 || isNaN(gols1) || isNaN(gols2) || user1 === user2) {
-            alert('🚨 Por favor, preencha todos os campos corretamente (série, dois times diferentes e gols numéricos).');
-            return;
-        }
-        
-        if (usuariosCadastrados[user1].series !== series || usuariosCadastrados[user2].series !== series) {
-            alert('🚨 Erro: Um ou ambos os times não estão alocados na Série selecionada.');
-            return;
-        }
-
-        let pontos1 = 0;
-        let pontos2 = 0;
-
-        if (gols1 > gols2) { pontos1 = 3; } 
-        else if (gols2 > gols1) { pontos2 = 3; } 
-        else { pontos1 = 1; pontos2 = 1; }
-
-        usuariosCadastrados[user1].stats.Pontos += pontos1;
-        usuariosCadastrados[user1].stats.Vitórias += (pontos1 === 3 ? 1 : 0);
-        usuariosCadastrados[user1].stats.Saldo += (gols1 - gols2);
-
-        usuariosCadastrados[user2].stats.Pontos += pontos2;
-        usuariosCadastrados[user2].stats.Vitórias += (pontos2 === 3 ? 1 : 0);
-        usuariosCadastrados[user2].stats.Saldo += (gols2 - gols1);
-
-        saveUsers();
-        renderClassificationTables();
-        
-        document.getElementById('jogo-gols1').value = '';
-        document.getElementById('jogo-gols2').value = '';
-        
-        alert(`✅ Resultado registrado! ${usuariosCadastrados[user1].teamName} ${gols1} x ${gols2} ${usuariosCadastrados[user2].teamName}. Classificação atualizada.`);
-    }
-
-    function openPerfilTime(username) {
-        const perfilModal = document.getElementById('perfil-time');
-        const team = usuariosCadastrados[username];
-
-        if (!perfilModal || !team) { alert(`Dados do time ${username} não encontrados.`); return; }
-
-        document.getElementById('perfil-time-nome').textContent = team.teamName;
-        document.getElementById('perfil-time-logo').src = team.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=LOGO';
-        document.getElementById('perfil-time-serie').textContent = team.series ? `Série: ${team.series}` : 'Série: Aguardando Alocação';
-
-        let statsHtml = team.stats ? `
-            <p>Pontos: <b>${team.stats.Pontos}</b></p>
-            <p>Vitórias: <b>${team.stats.Vitórias}</b></p>
-            <p>Saldo de Gols: <b>${team.stats.Saldo}</b></p>
-        ` : 'Nenhuma estatística disponível.';
-        document.getElementById('perfil-time-stats').innerHTML = statsHtml;
-
-        const teamPosts = posts.filter(post => post.author === team.teamName);
-        let feedHtml = '';
-        if (teamPosts.length > 0) {
-            feedHtml = teamPosts.map(post => {
-                let img = post.image ? `<img src="${post.image}" style="max-width:100%; height:auto; border-radius:5px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
-                return `<div style="background:#0a1324; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.1);"><p style="font-size:0.9em;">${post.content}</p>${img}<p style="font-size:0.7em; color:#999; text-align:right;">${post.date}</p></div>`;
-            }).join('');
-        } else {
-            feedHtml = '<p style="color:#999;">Nenhum post recente deste time.</p>';
-        }
-        document.getElementById('perfil-time-feed').innerHTML = feedHtml;
-
-        perfilModal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-    }
-
-
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SUPERLIGA - Rede Social e Admin</title>
-    <style>
-        /* [Seção de Estilos CSS] */
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
-        header { text-align: center; padding: 40px 20px 60px; background: linear-gradient(180deg, #06142e, #050b16); border-bottom: 3px solid #00ff96; }
-        .logo { width: 180px; filter: drop-shadow(0 0 15px #00ff96); }
-        h1 { margin-top: 15px; font-size: 2.8rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 15px #00ff96; color: #ffffff; }
-        nav { display: flex; justify-content: center; gap: 40px; padding: 20px; background: #06142e; position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid #00ff96; }
-        nav a { color: #00ff96; text-decoration: none; font-size: 1.2rem; font-weight: bold; transition: 0.3s ease-in-out; padding: 5px 10px; border-radius: 5px; position: relative; }
-        nav a:hover { color: #f2c94c; text-shadow: 0 0 10px #f2c94c; transform: scale(1.05); background: rgba(242, 201, 76, 0.1); }
-        .container { width: 90%; max-width: 1200px; margin: 30px auto; padding: 0 10px; }
-        .card { background: rgba(255,255,255,0.08); border: 1px solid rgba(0,255,150,0.5); padding: 25px; border-radius: 16px; margin-bottom: 35px; box-shadow: 0 0 15px rgba(0,255,150,0.3); transition: transform 0.3s ease; }
-        .title { font-size: 2rem; margin-bottom: 20px; color: #00ff96; text-shadow: 0 0 10px #00ff96; border-bottom: 2px dashed rgba(0,255,150,0.4); padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.05rem; }
-        th, td { padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); }
-        th { background: rgba(0,255,150,0.25); color: #ffffff; font-size: 1.15rem; text-transform: uppercase; }
-        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
-        tr:hover { background: rgba(0,255,150,0.1); cursor: pointer; }
-        .team-link { cursor: pointer; color: #f2c94c; font-weight: bold; text-shadow: 0 0 3px #f2c94c; transition: color 0.2s; }
-        .action-button { width: 100%; padding: 15px; background: #00ff96; border: none; border-radius: 10px; margin-top: 5px; font-size: 1.1rem; font-weight: bold; color: #050b16; box-shadow: 0 0 15px #00ff96; cursor: pointer; transition: background 0.3s, transform 0.2s; }
-        .link-switch { color:#f2c94c; text-decoration:none; cursor: pointer; font-weight: bold; transition: color 0.2s; }
-
-        /* Estilo dos Posts e Formulário de Publicação */
-        .post { background: #0a1324; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 15px; }
-        .post-header { display: flex; align-items: center; margin-bottom: 10px; }
-        .post-author { font-weight: bold; color: #00ff96; margin-right: 10px; }
-        .post-date { font-size: 0.8em; color: #999; }
-        .post-content { color: #ccc; }
-        #post-form-container textarea { width: 96%; padding: 10px; background: #0a1324; border: 1px solid #00ff96; border-radius: 8px; color: white; resize: vertical; min-height: 80px; }
-
-        /* Modal e Inputs */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; background: rgba(5, 11, 22, 0.95); z-index: 9999; padding-bottom: 60px; backdrop-filter: blur(5px); }
-        .login-box { background:rgba(255,255,255,0.05); border:1px solid #00ff96; width:85%; max-width:420px; margin:auto; padding:35px; border-radius:14px; box-shadow:0 0 25px rgba(0,255,150,0.4); }
-        .login-input { width:90%; padding:15px; background:#0a1324; border:1px solid #00ff96; border-radius:8px; color:white; margin-bottom:20px; font-size: 1rem; }
-        
-        .modal-header {
-            width: 100%;
-            height: 220px;
-            background: linear-gradient(135deg,#00ff96,#06142e);
-            box-shadow: 0 0 30px #00ff96;
-            position: relative;
-            text-align: center;
-            padding-top: 40px;
-            margin-bottom: 0;
-        }
-        .modal-content {
-            width: 90%;
-            max-width: 900px;
-            margin: 20px auto;
-        }
-        /* Estilo do botão de fechar no admin panel */
-        .close-btn { 
-            position: absolute; 
-            top: 15px; 
-            right: 25px; 
-            font-size: 30px; 
-            font-weight: bold; 
-            color: #ff004c; 
-            cursor: pointer;
-            text-decoration: none;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-        .close-btn:hover {
-            color: #ffffff;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <img src="https://i.imgur.com/uG7b3K8.png" class="logo" alt="Logo Superliga" />
-        <h1>SUPERLIGA BRASILEIRA</h1>
-        <button onclick="openLogin()" id="header-login-button" style="margin-top: 20px; padding: 10px 20px; background: #f2c94c; border: none; border-radius: 8px; font-weight: bold; color: #050b16; cursor: pointer; box-shadow: 0 0 10px #f2c94c; transition: background 0.3s;">
-            ACESSAR CONTA
-        </button>
-        <button onclick="openAdminPanel()" id="admin-panel-button" style="display:none; margin-top: 20px; padding: 10px 20px; background: #ff004c; border: none; border-radius: 8px; font-weight: bold; color: #ffffff; cursor: pointer; box-shadow: 0 0 10px #ff004c; margin-left: 10px; transition: background 0.3s;">
-            PAINEL ADMIN
-        </button>
-    </header>
-
-    <nav>
-        <a href="#feed">Feed</a>
-        <a href="#series">Séries A e B</a>
-        <a href="#times">Times Cadastrados</a>
-        <a href="#" onclick="openLogin()">Login/Cadastro</a>
-    </nav>
-
-    <div class="container" id="feed">
-        <div class="card">
-            <div class="title">📸 Feed Oficial</div>
-
-            <div id="post-form-container" style="display:none; margin-bottom: 30px; padding: 15px; background: #06142e; border-radius: 10px; border: 1px solid #f2c94c;">
-                <h3 style="color:#f2c94c;">O que está acontecendo na Superliga?</h3>
-                <textarea id="post-input" placeholder="Publique uma notícia ou atualização do seu time..." maxlength="300"></textarea>
-                
-                <input type="url" id="post-image-url" 
-                       placeholder="URL da Imagem (opcional)" 
-                       class="login-input" 
-                       style="width: 96%; margin-top: 10px;"
-                       oninput="showImagePreview(this.value)" 
-                />
-                
-                <img id="image-preview" src="" alt="Prévia da Imagem" style="display:none; max-width: 96%; height: auto; margin-top: 10px; border-radius: 5px; border: 2px solid #f2c94c;">
-                
-                <button onclick="publishPost()" class="action-button" style="width: auto; padding: 10px 20px; margin-top: 10px;">Publicar</button>
-            </div>
-
-            <div id="feed-posts">
-                </div>
-        </div>
-    </div>
-
-    <div class="container" id="series">
-        <div class="card">
-            <div class="title">🏆 Série A — Classificação</div>
-            <p id="series-a-status">Nenhum time na Série A.</p>
-            <table id="tabela-serie-a" style="display:none;">
-                <thead><tr><th>Time</th><th>Pontos</th><th>Vitórias</th><th>Saldo</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <div class="title">💠 Série B — Classificação</div>
-            <p id="series-b-status">Nenhum time na Série B.</p>
-            <table id="tabela-serie-b" style="display:none;">
-                <thead><tr><th>Time</th><th>Pontos</th><th>Vitórias</th><th>Saldo</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="container" id="times">
-        <div class="card">
-            <div class="title">🛡️ Times Cadastrados</div>
-            <div id="times-list">
-                <p>Nenhum time cadastrado além do administrador.</p>
-            </div>
-        </div>
-    </div>
-
-    <footer>
-        SUPERLIGA © 2025 — O Campeonato Futurista do Brasil
-    </footer>
-
-<div id="perfil-time" class="modal">
-    <div class="modal-header">
-        <img id="perfil-time-logo" src="" class="modal-logo" alt="Logo do Time" style="width: 130px; filter: drop-shadow(0 0 10px #000); border-radius: 50%; border: 5px solid #fff; object-fit: cover;"/>
-        <h2 id="perfil-time-nome" style="margin-top:15px; font-size:2rem; color:white; text-shadow:0 0 10px #000;"></h2>
-        <p id="perfil-time-serie" style="color:#f2c94c; font-weight: bold;"></p>
-    </div>
-
-    <div class="modal-content">
-        <div class="card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 14px; border: 1px solid #00ff96; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,255,150,0.5);">
-            <h3 class="title" style="color:#00ff96; margin-bottom: 15px; text-shadow: 0 0 8px #00ff96; border-bottom: 1px solid rgba(0,255,150,0.5); padding-bottom: 10px; font-size: 1.5rem;">📊 Estatísticas</h3>
-            <div id="perfil-time-stats">Nenhuma estatística disponível.</div>
-        </div>
-
-        <div class="card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 14px; border: 1px solid #00ff96; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,255,150,0.5);">
-            <h3 class="title" style="color:#00ff96; margin-bottom: 15px; text-shadow: 0 0 8px #00ff96; border-bottom: 1px solid rgba(0,255,150,0.5); padding-bottom: 10px; font-size: 1.5rem;">📰 Posts Recentes</h3>
-            <div id="perfil-time-feed">Nenhum post deste time.</div>
-        </div>
-
-        <button onclick="closePerfilTime()" class="action-button">Voltar à Liga</button>
-    </div>
-</div>
-
-<div id="login" class="modal" style="padding-top:120px; text-align:center;">
-    <div class="login-box">
-        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
-        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">ACESSO DE MEMBRO</h2>
-        <input type="text" placeholder="Usuário/E-mail" id="login-user" class="login-input" />
-        <input type="password" placeholder="Senha" id="login-pass" class="login-input" />
-        <button onclick="fazerLogin()" class="action-button">ENTRAR</button>
-        <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
-            Ainda não tem conta? <a class="link-switch" onclick="openRegister()">Cadastre-se aqui</a>.
-        </p>
-        <button onclick="closeLogin()" style="padding: 10px 20px; background: transparent; border: 1px solid #00ff96; border-radius: 8px; font-weight: bold; color: #00ff96; cursor: pointer; margin-top: 15px; transition: background 0.3s;">
-            Cancelar
-        </button>
-    </div>
-</div>
-
-<div id="register" class="modal" style="padding-top:120px; text-align:center;">
-    <div class="login-box">
-        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
-        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO TIME</h2>
-        
-        <input type="url" placeholder="URL do Logo do Time (Opcional)" id="register-logo" class="login-input" />
-        
-        <input type="text" placeholder="Nome do Time (Será seu Nome de Usuário)" id="register-user" class="login-input" />
-        <input type="email" placeholder="E-mail do Responsável" id="register-email" class="login-input" />
-        <input type="password" placeholder="Senha (Mínimo 6 caracteres)" id="register-pass" class="login-input" />
-        <button onclick="fazerCadastro()" class="action-button">CADASTRAR TIME</button>
-        <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
-            Já é membro? <a class="link-switch" onclick="openLogin()">Voltar ao Login</a>.
-        </p>
-        <button onclick="closeRegister()" style="padding: 10px 20px; background: transparent; border: 1px solid #00ff96; border-radius: 8px; font-weight: bold; color: #00ff96; cursor: pointer; margin-top: 15px; transition: background 0.3s;">
-            Cancelar
-        </button>
-    </div>
-</div>
-
-<div id="admin-panel" class="modal" style="padding-top:60px;">
-    <div class="modal-content">
-        <a href="#" onclick="fecharPainelAdmin()" class="close-btn">X</a> 
-
-        <div class="card" style="margin-bottom: 25px; position: relative;">
-            <h2 class="title" style="border-color: #ff004c;">⚽ REGISTRAR NOVO JOGO</h2>
-            <p style="color: #ccc; margin-bottom: 15px;">Insira o placar da partida para atualizar as classificações.</p>
-
-            <label style="display:block; margin-bottom: 5px; color:#00ff96;">Série da Partida:</label>
-            <select id="jogo-series" class="login-input" style="width:100%;" onchange="filterTeamsBySeries(this.value)">
-                <option value="">-- Selecione a Série --</option>
-                <option value="Série A">Série A</option>
-                <option value="Série B">Série B</option>
-            </select>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                <div style="width: 45%;">
-                    <label style="display:block; margin-bottom: 5px; color:#f2c94c;">Time 1 (Casa):</label>
-                    <select id="jogo-time1" class="login-input" style="width:100%;"></select>
-                    <input type="number" id="jogo-gols1" placeholder="Gols Time 1" class="login-input" min="0" style="width:90%;" />
-                </div>
-
-                <div style="width: 10%; text-align: center; font-size: 1.5rem; color:#ff004c; font-weight: bold;">VS</div>
-
-                <div style="width: 45%;">
-                    <label style="display:block; margin-bottom: 5px; color:#f2c94c;">Time 2 (Visitante):</label>
-                    <select id="jogo-time2" class="login-input" style="width:100%;"></select>
-                    <input type="number" id="jogo-gols2" placeholder="Gols Time 2" class="login-input" min="0" style="width:90%;" />
-                </div>
-            </div>
-
-            <button onclick="registrarResultado()" class="action-button" style="background: #ff004c; margin-top: 20px;">
-                CALCULAR E REGISTRAR
-            </button>
-        </div>
-        
-        <div class="card">
-            <h2 class="title" style="border-color: #ff004c;">👥 ALOCAÇÃO DE TIMES</h2>
-            <p style="color: #ff004c; font-weight: bold;">Gerencie a alocação dos times nas Séries A e B.</p>
-            <div id="admin-teams-list">
-                </div>
-            <button onclick="fecharPainelAdmin()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Variável para rastrear o usuário logado
-    let loggedInUser = null;
-
-    // --- Dados dos Times (Série A e B 2025) e Logos ---
-    const teamData = {
-        // --- SÉRIE A ---
-        'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
-        'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
-        'Athletico-PR': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/23/Clube_Athletico-Paranaense_2020.png' },
-        'Bahia': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1d/Esporte_Clube_Bahia.png' },
-        'Botafogo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Botafogo_de_Futebol_e_Regatas_logo.svg' },
-        'Corinthians': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Corinthians_logo.png' },
-        'Criciúma': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1a/Criciúma_Esporte_Clube.png' },
-        'Cruzeiro': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/CruzeiroEsporteClube.png' },
-        'Cuiabá': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d5/Cuiab%C3%A1_Esporte_Clube_-_Escudo.png/50px-Cuiab%C3%A1_Esporte_Clube_-_Escudo.png' },
-        'Flamengo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Flamengo-RJ_%28BRA%29.png' },
-        'Fluminense': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Fluminense_FC_escudo.png' },
-        'Fortaleza': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Fortaleza_Esporte_Clube_novo_logo.png' },
-        'Grêmio': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Gremio_logo.png' },
-        'Internacional': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Escudo_do_Sport_Club_Internacional.svg' },
-        'Juventude': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Juventude_logo.png' },
-        'Palmeiras': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/10/Palmeiras_logo.svg' },
-        'Red Bull Bragantino': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/50/Red_Bull_Bragantino_escudo.png' },
-        'São Paulo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4f/S%C3%A3o_Paulo_Futebol_Clube.png' },
-        'Vasco': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Escudo_do_Club_de_Regatas_Vasco_da_Gama.svg' },
-        'Vitória': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/EC_Vitória_-_Ba.png' },
-        
-        // --- SÉRIE B ---
-        'América-MG': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Am%C3%A9rica_Futebol_Clube_logo.svg' },
-        'Avaí': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/54/Ava%C3%AD_Futebol_Clube.png' },
-        'Botafogo-SP': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/87/Botafogo-SP.png' },
-        'Brusque': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Brusque_FC.png' },
-        'Ceará': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fc/Ceara_SC.png' },
-        'Chapecoense': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Associa%C3%A7%C3%A3o_Chapecoense_de_Futebol.png' },
-        'CRB': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b0/Clube_de_Regatas_Brasil.png' },
-        'Goiás': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Goi%C3%A1s_Esporte_Clube.png' },
-        'Guarani': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/2d/Guarani-SP.png' },
-        'Ituano': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/0/07/Ituano_Futebol_Clube.png' },
-        'Novorizontino': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/11/Gr%C3%AAmio_Novorizontino.png' },
-        'Operário-PR': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/8f/Oper%C3%A1rio_Ferrovi%C3%A1rio_Esporte_Clube.png' },
-        'Paysandu': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Escudo_Paysandu.png' },
-        'Ponte Preta': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/7/7b/Aapp_escudo.png' },
-        'Santos': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b1/Santos_FC_logo.png' },
-        'Sport': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/e/eb/Sport_Club_do_Recife.png' },
-        'Vila Nova': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/d/d4/Vila_Nova_Futebol_Clube.png' },
-        'Amazonas': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d4/Amazonas_FC_logo.png/50px-Amazonas_FC_logo.png' },
-        'Mirassol': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Mirassol_Futebol_Clube.png' },
-        'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
-    };
-
-    // Função que constrói os dados iniciais dos times
-    function initializeTeamData() {
-        const users = {
-            'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }, logo: 'https://i.imgur.com/uG7b3K8.png' }
+        const newPost = {
+            author: usuariosCadastrados[loggedInUser].teamName,
+            content: postContent,
+            date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
+            image: postImage || null
         };
 
-        for (const teamName in teamData) {
-            // Normalização do nome do time para ser um username simples
-            const username = teamName.toLowerCase().replace(/\s/g, '').replace(/-/g, '').replace(/[áéíóúãõç]/g, match => {
-                const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
-                return map[match] || match;
-            });
-            
-            users[username] = {
-                email: `${username}@superliga.br`,
-                senha: '123456',
-                isAdmin: false,
-                teamName: teamName,
-                series: teamData[teamName].series,
-                logo: teamData[teamName].logo,
-                stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }
-            };
-        }
-        return users;
-    }
-
-    // --- Data Storage (Simulação de DB com localStorage) ---
-    let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || initializeTeamData();
-    let posts = JSON.parse(localStorage.getItem('superligaPosts')) || [
-        { author: 'Administrador', content: 'Bem-vindo à nova SUPERLIGA! Todos os 40 times da Série A e B foram importados e estão prontos para o jogo!', date: new Date().toLocaleDateString('pt-BR'), image: null }
-    ];
-
-    // --- Funções de Ajuda e Inicialização ---
-    function saveUsers() { localStorage.setItem('superligaUsers', JSON.stringify(usuariosCadastrados)); }
-    function savePosts() { localStorage.setItem('superligaPosts', JSON.stringify(posts)); }
-    function getAllTeams() {
-        return Object.keys(usuariosCadastrados)
-            .filter(user => user !== 'admin' && !usuariosCadastrados[user].isAdmin)
-            .map(user => ({ username: user, ...usuariosCadastrados[user] }));
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const storedUser = localStorage.getItem('loggedInUser');
-        if (storedUser && usuariosCadastrados[storedUser]) {
-            loggedInUser = storedUser;
-        }
-
-        updateHeaderButtons(loggedInUser); 
+        posts.unshift(newPost); // Adiciona no início da lista
+        savePosts();
+        document.getElementById('post-input').value = '';
+        document.getElementById('post-image-url').value = '';
+        document.getElementById('image-preview').style.display = 'none';
         renderFeed();
-        renderClassificationTables();
-        renderTeamsList();
-    });
-
-    // --- Funções de Modais e Navegação ---
-    function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
-    function closeLogin() { document.getElementById('login').style.display = 'none'; document.body.style.overflow = 'auto'; }
-    function openRegister() { document.getElementById('login').style.display = 'none'; document.getElementById('register').style.display = 'block'; document.body.style.overflow = 'hidden'; }
-    function closeRegister() { document.getElementById('register').style.display = 'none'; document.body.style.overflow = 'auto'; }
-    function closePerfilTime() { document.getElementById('perfil-time').style.display = 'none'; document.body.style.overflow = 'auto'; }
-    
-    // --- FUNÇÃO DE FECHAMENTO DO ADMIN PANEL ---
-    function fecharPainelAdmin() {
-        document.getElementById('admin-panel').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-    
-    // --- FUNÇÃO DE ABERTURA DO ADMIN PANEL ---
-    function openAdminPanel() {
-        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) { alert('Acesso negado.'); return; }
-        renderAdminTeamList();
-        filterTeamsBySeries(''); 
-        document.getElementById('admin-panel').style.display = 'block';
-        document.body.style.overflow = 'hidden';
+        alert('✅ Post publicado com sucesso!');
     }
 
+    function renderFeed() {
+        const feedContainer = document.getElementById('feed-posts');
+        feedContainer.innerHTML = '';
 
-    // --- Funções de Login e Cadastro (ATUALIZADA PARA LOGO) ---
-    function updateHeaderButtons(user) {
-        const loginBtn = document.getElementById('header-login-button');
-        const adminBtn = document.getElementById('admin-panel-button');
-        const postForm = document.getElementById('post-form-container');
+        if (posts.length === 0) {
+            feedContainer.innerHTML = '<p style="color:#ccc; text-align:center;">Nenhum post no feed ainda.</p>';
+            return;
+        }
 
-        if (user) {
-            loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].teamName})`;
-            loginBtn.onclick = fazerLogout;
-            if (usuariosCadastrados[user].isAdmin) {
-                adminBtn.style.display = 'inline-block';
-            } else {
-                adminBtn.style.display = 'none';
+        posts.forEach(post => {
+            let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
+
+            const postElement = document.createElement('div');
+            postElement.className = 'post';
+            postElement.innerHTML = `
+                <div class="post-header">
+                    <span class="post-author">${post.author}</span>
+                    <span class="post-date">${post.date}</span>
+                </div>
+                <div class="post-content">
+                    ${post.content.replace(/\n/g, '<br>')}
+                    ${imageHtml}
+                </div>
+            `;
+            feedContainer.appendChild(postElement);
+        });
+    }
+
+    // --- Funções de Classificação (ATUALIZADA para exibir 8 colunas) ---
+    function sortTeams(a, b) {
+        // 1. Pontos
+        if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
+        // 2. Vitórias
+        if (b.stats.Vitórias !== a.stats.Vitórias) return b.stats.Vitórias - a.stats.Vitórias;
+        // 3. Saldo de Gols
+        if (b.stats.Saldo !== a.stats.Saldo) return b.stats.Saldo - a.stats.Saldo;
+        // 4. Gols Pró (Desempate final)
+        return b.stats.GolsPro - a.stats.GolsPro; 
+    }
+
+    function renderClassificationTables() {
+        const teams = getAllTeams().filter(team => team.series);
+
+        const serieA = teams.filter(t => t.series === 'Série A').sort(sortTeams);
+        const serieB = teams.filter(t => t.series === 'Série B').sort(sortTeams);
+
+        const renderTable = (tableBodyId, teams, statusId) => {
+            const tableBody = document.querySelector(`#${tableBodyId} tbody`);
+            const table = document.getElementById(tableBodyId);
+            const status = document.getElementById(statusId);
+
+            tableBody.innerHTML = '';
+
+            if (teams.length === 0) {
+                table.style.display = 'none';
+                status.style.display = 'block';
+                return;
             }
-            postForm.style.display = 'block';
+            
+            table.style.display = 'table';
+            status.style.display = 'none';
 
-        } else {
-            loginBtn.textContent = 'ACESSAR CONTA';
-            loginBtn.onclick = openLogin;
-            adminBtn.style.display = 'none';
-            postForm.style.display = 'none';
-        }
-    }
+            teams.forEach((team, index) => {
+                const stats = team.stats;
+                const row = tableBody.insertRow();
+                
+                // Posição (coluna 1)
+                row.insertCell().textContent = index + 1;
+                
+                // Time (coluna 2 - link para perfil)
+                const teamCell = row.insertCell();
+                teamCell.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <img src="${team.logo}" alt="Logo" style="width: 25px; height: 25px; margin-right: 8px; border-radius: 50%; object-fit: cover;">
+                        <a onclick="openPerfilTime('${team.username}')" class="team-link">${team.teamName}</a>
+                    </div>
+                `;
+                teamCell.style.textAlign = 'left';
 
-    function fazerLogin() {
-        const user = document.getElementById('login-user').value.trim();
-        const pass = document.getElementById('login-pass').value.trim();
-
-        const userFound = Object.keys(usuariosCadastrados).find(key => key === user || usuariosCadastrados[key].email === user);
-
-        if (userFound && usuariosCadastrados[userFound].senha === pass) {
-            loggedInUser = userFound;
-            localStorage.setItem('loggedInUser', loggedInUser); 
-            closeLogin();
-            updateHeaderButtons(loggedInUser);
-            alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].teamName}.`);
-        } else {
-            alert('❌ Credenciais incorretas. Verifique seu Usuário/E-mail e Senha.');
-        }
-    }
-
-    function fazerLogout() {
-        loggedInUser = null;
-        localStorage.removeItem('loggedInUser'); 
-        updateHeaderButtons(null);
-        alert('Você foi desconectado(a) com sucesso.');
-    }
-
-    function fazerCadastro() {
-        // NOVO: Coleta a URL do logo
-        const logoUrl = document.getElementById('register-logo').value.trim(); 
-        const user = document.getElementById('register-user').value.trim();
-        const email = document.getElementById('register-email').value.trim();
-        const pass = document.getElementById('register-pass').value.trim();
-
-        if (!user || !email || !pass || pass.length < 6) {
-            alert('🚨 Por favor, preencha todos os campos obrigatórios e use uma senha de no mínimo 6 caracteres.');
-            return;
-        }
-        if (Object.keys(usuariosCadastrados).includes(user)) {
-            alert('❌ Nome de time/usuário já cadastrado.');
-            return;
-        }
-        if (Object.values(usuariosCadastrados).some(u => u.teamName === user)) {
-            alert('❌ Este nome de time já está sendo usado. Por favor, escolha um nome diferente.');
-            return;
-        }
-
-        usuariosCadastrados[user] = {
-            email: email,
-            senha: pass,
-            isAdmin: false,
-            teamName: user,
-            series: null,
-            // LOGO GENÉRICA SE NENHUMA URL FOR FORNECIDA
-            logo: logoUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=NOVO', 
-            stats: { Pontos: 0, Vitórias: 0, Saldo: 0 } 
+                // ESTATÍSTICAS COMPLETAS (8 COLUNAS)
+                row.insertCell().textContent = stats.Pontos;     // P
+                row.insertCell().textContent = stats.Jogos;       // J
+                row.insertCell().textContent = stats.Vitórias;    // V
+                row.insertCell().textContent = stats.Empates;     // E
+                row.insertCell().textContent = stats.Derrotas;    // D
+                row.insertCell().textContent = stats.GolsPro;     // GP
+                row.insertCell().textContent = stats.GolsContra;  // GC
+                row.insertCell().textContent = stats.Saldo;       // SG
+            });
         };
 
-        saveUsers();
-        alert(`🎉 Time "${user}" cadastrado com sucesso!`);
-        closeRegister();
-        openLogin();
+        // Adicionando a coluna de Posição ao Thead
+        const updateHeader = (tableId) => {
+            const thead = document.querySelector(`#${tableId} thead tr`);
+            if (thead.cells.length === 9) return; // Já tem 9 colunas
+
+            const newTh = document.createElement('th');
+            newTh.textContent = '#';
+            thead.insertBefore(newTh, thead.firstChild); 
+            
+            // Corrige o cabeçalho do Time que moveu a posição
+            thead.cells[1].textContent = 'Time';
+            thead.cells[1].style.textAlign = 'left'; 
+        };
+
+        updateHeader('tabela-serie-a');
+        updateHeader('tabela-serie-b');
+
+        renderTable('tabela-serie-a', serieA, 'series-a-status');
+        renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
-    
-    // --- Funções de Feed, Classificação e Admin (Mantidas) ---
-    // (Omitidas por brevidade, mas estão completas no arquivo final)
-    
-    function showImagePreview(url) { /* ... */ }
-    function publishPost() { /* ... */ }
-    function renderFeed() { /* ... */ }
-    function renderClassificationTables() { /* ... */ }
-    function renderTeamsList() { /* ... */ }
-    function renderAdminTeamList() { /* ... */ }
-    function changeTeamSeries(username, newSeries) { /* ... */ }
-    function populateTeamSelects(seriesFilter = null) { /* ... */ }
-    function filterTeamsBySeries(series) { /* ... */ }
-    function registrarResultado() { /* ... */ }
-    function openPerfilTime(username) { /* ... */ }
 
+    // --- Funções de Gestão Admin ---
+    function renderTeamsList() {
+        const teamsList = document.getElementById('times-list');
+        teamsList.innerHTML = '';
+        const teams = getAllTeams().sort((a, b) => a.teamName.localeCompare(b.teamName));
 
-    // --- Funções Omitidas para Redução de Texto, mas presentes no arquivo final ---
+        if (teams.length === 0) {
+            teamsList.innerHTML = '<p>Nenhum time cadastrado além do administrador.</p>';
+            return;
+        }
+
+        teams.forEach(team => {
+            const teamElement = document.createElement('div');
+            teamElement.className = 'card';
+            teamElement.style.cssText = 'padding: 15px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #0a1324; cursor: pointer;';
+            teamElement.onclick = () => openPerfilTime(team.username);
+
+            teamElement.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    <img src="${team.logo}" alt="Logo" style="width: 40px; height: 40px; margin-right: 15px; border-radius: 50%; object-fit: cover;">
+                    <div>
+                        <strong style="color: #00ff96;">${team.teamName}</strong>
+                        <p style="margin: 0; font-size: 0.9em; color: #ccc;">Série: ${team.series || 'Nenhuma'}</p>
+                    </div>
+                </div>
+                <span style="color: #f2c94c; font-weight: bold;">P: ${team.stats.Pontos || 0}</span>
+            `;
+            teamsList.appendChild(teamElement);
+        });
+    }
+
     function renderAdminTeamList() {
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
@@ -1137,7 +673,7 @@
                 <div style="display: flex; align-items: center;">
                     <img src="${team.logo}" alt="Logo" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;">
                     <div>
-                        <strong style="color: #00ff96;">${team.teamName}</strong> (Usuário: ${team.username})
+                        <strong style="color: #00ff96;">${team.teamName}</strong>
                         <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
                     </div>
                 </div>
@@ -1156,13 +692,15 @@
             usuariosCadastrados[username].series = null;
         } else {
             usuariosCadastrados[username].series = newSeries;
-            if (!usuariosCadastrados[username].stats) {
-                 usuariosCadastrados[username].stats = { Pontos: 0, Vitórias: 0, Saldo: 0 };
+            // Garante que o objeto stats existe na nova estrutura
+            if (!usuariosCadastrados[username].stats || !usuariosCadastrados[username].stats.Jogos) {
+                 usuariosCadastrados[username].stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
             }
         }
         saveUsers();
         alert(`Time ${usuariosCadastrados[username].teamName} alocado para ${newSeries}.`);
         renderAdminTeamList(); 
+        renderClassificationTables(); // Atualiza a tabela imediatamente
     }
 
     function populateTeamSelects(seriesFilter = null) {
@@ -1195,6 +733,7 @@
         }
     }
 
+    // FUNÇÃO REGISTRAR RESULTADO ATUALIZADA (V3.0)
     function registrarResultado() {
         const series = document.getElementById('jogo-series').value;
         const user1 = document.getElementById('jogo-time1').value;
@@ -1212,19 +751,46 @@
             return;
         }
 
+        // --- Estatísticas que SEMPRE AUMENTAM (Jogos, Gols Pró, Gols Contra) ---
+        // Time 1 (Casa)
+        usuariosCadastrados[user1].stats.Jogos += 1;
+        usuariosCadastrados[user1].stats.GolsPro += gols1;
+        usuariosCadastrados[user1].stats.GolsContra += gols2;
+
+        // Time 2 (Visitante)
+        usuariosCadastrados[user2].stats.Jogos += 1;
+        usuariosCadastrados[user2].stats.GolsPro += gols2;
+        usuariosCadastrados[user2].stats.GolsContra += gols1;
+        
+        // --- Lógica de Pontos e Resultados ---
         let pontos1 = 0;
         let pontos2 = 0;
 
-        if (gols1 > gols2) { pontos1 = 3; } 
-        else if (gols2 > gols1) { pontos2 = 3; } 
-        else { pontos1 = 1; pontos2 = 1; }
+        if (gols1 > gols2) { 
+            // Vitória do Time 1
+            pontos1 = 3;
+            usuariosCadastrados[user1].stats.Vitórias += 1;
+            usuariosCadastrados[user2].stats.Derrotas += 1;
+        } 
+        else if (gols2 > gols1) { 
+            // Vitória do Time 2
+            pontos2 = 3;
+            usuariosCadastrados[user2].stats.Vitórias += 1;
+            usuariosCadastrados[user1].stats.Derrotas += 1;
+        } 
+        else { 
+            // Empate
+            pontos1 = 1; 
+            pontos2 = 1;
+            usuariosCadastrados[user1].stats.Empates += 1;
+            usuariosCadastrados[user2].stats.Empates += 1;
+        }
 
+        // Aplica Pontos e Saldo
         usuariosCadastrados[user1].stats.Pontos += pontos1;
-        usuariosCadastrados[user1].stats.Vitórias += (pontos1 === 3 ? 1 : 0);
         usuariosCadastrados[user1].stats.Saldo += (gols1 - gols2);
 
         usuariosCadastrados[user2].stats.Pontos += pontos2;
-        usuariosCadastrados[user2].stats.Vitórias += (pontos2 === 3 ? 1 : 0);
         usuariosCadastrados[user2].stats.Saldo += (gols2 - gols1);
 
         saveUsers();
@@ -1246,11 +812,20 @@
         document.getElementById('perfil-time-logo').src = team.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=LOGO';
         document.getElementById('perfil-time-serie').textContent = team.series ? `Série: ${team.series}` : 'Série: Aguardando Alocação';
 
-        let statsHtml = team.stats ? `
-            <p>Pontos: <b>${team.stats.Pontos}</b></p>
-            <p>Vitórias: <b>${team.stats.Vitórias}</b></p>
-            <p>Saldo de Gols: <b>${team.stats.Saldo}</b></p>
-        ` : 'Nenhuma estatística disponível.';
+        const stats = team.stats || { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+
+        let statsHtml = `
+            <table style="width:100%; text-align:left; background:none;">
+                <tr><td style="width:50%; padding: 5px 0;">Pontos (P):</td><td style="padding: 5px 0;"><b>${stats.Pontos}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Jogos (J):</td><td style="padding: 5px 0;"><b>${stats.Jogos}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Vitórias (V):</td><td style="padding: 5px 0;"><b>${stats.Vitórias}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Empates (E):</td><td style="padding: 5px 0;"><b>${stats.Empates}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Derrotas (D):</td><td style="padding: 5px 0;"><b>${stats.Derrotas}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Gols Pró (GP):</td><td style="padding: 5px 0;"><b>${stats.GolsPro}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Gols Contra (GC):</td><td style="padding: 5px 0;"><b>${stats.GolsContra}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Saldo de Gols (SG):</td><td style="padding: 5px 0;"><b>${stats.Saldo}</b></td></tr>
+            </table>
+        `;
         document.getElementById('perfil-time-stats').innerHTML = statsHtml;
 
         const teamPosts = posts.filter(post => post.author === team.teamName);
