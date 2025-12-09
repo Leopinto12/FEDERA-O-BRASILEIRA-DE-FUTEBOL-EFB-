@@ -263,7 +263,6 @@
 
 <script>
     // ** NOVAS IMPORTAÇÕES DO FIREBASE **
-    // Certifique-se de que a versão 9.6.10 seja a que você configurou.
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
@@ -286,6 +285,10 @@
     let usuariosCadastrados = {}; 
     let posts = [];
     let loggedInUser = null;
+
+    // Objeto padrão para garantir que todos os times tenham essas chaves zeradas
+    const defaultStats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+
 
     // --- Data dos Times (Série A e B 2025) ---
     const teamData = {
@@ -346,7 +349,7 @@
                 series: null, 
                 logo: 'https://i.imgur.com/uG7b3K8.png', 
                 profilePic: 'https://i.imgur.com/uG7b3K8.png', 
-                stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } 
+                stats: defaultStats 
             }
         };
     }
@@ -356,6 +359,8 @@
     // NOVO: Função para salvar/atualizar USUÁRIOS no Firebase (Coleção 'users')
     async function saveUsersToFirebase(userKey, userData) {
         try {
+            // Certifica-se que o objeto tem as chaves stats
+            userData.stats = { ...defaultStats, ...userData.stats }; 
             await db.collection("users").doc(userKey).set(userData);
             console.log("Usuário salvo no Firebase:", userKey);
         } catch (e) {
@@ -372,10 +377,8 @@
             usuariosCadastrados = {};
             userSnapshot.forEach(doc => {
                 const userData = doc.data();
-                // Garante que o stats tenha todos os campos para evitar NaN
-                if (!userData.stats) {
-                    userData.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
-                }
+                // 🚨 CORREÇÃO DE BUG: Garante que o stats tenha todos os campos para evitar NaN
+                userData.stats = { ...defaultStats, ...userData.stats }; 
                 usuariosCadastrados[doc.id] = userData;
             });
 
@@ -398,7 +401,11 @@
 
         } catch (e) {
             console.error("Erro ao carregar dados do Firebase. Verifique a conexão ou as Regras de Segurança (Firestore).", e);
-            alert("Erro de conexão com o Banco de Dados. Recarregue a página.");
+            // Em caso de erro de conexão, tentamos usar o admin local para que o usuário possa logar
+            if (Object.keys(usuariosCadastrados).length === 0) {
+                 usuariosCadastrados = initializeTeamData();
+                 console.log("Falha no Firebase, carregando apenas o administrador localmente.");
+            }
         }
     }
 
@@ -536,7 +543,7 @@
             teamName: null, 
             series: null,
             logo: null, 
-            stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 }
+            stats: defaultStats 
         };
 
         // 🚨 Salva no Firebase (novo backend)
@@ -684,6 +691,10 @@
         if (b.stats.Saldo !== a.stats.Saldo) return b.stats.Saldo - a.stats.Saldo;
         return b.stats.GolsPro - a.stats.GolsPro; 
     }
+    
+    function getAllTeams() {
+        return Object.values(usuariosCadastrados).filter(user => user.teamName !== 'Administrador');
+    }
 
     function renderClassificationTables() {
         const teams = getAllTeams().filter(team => team.series);
@@ -742,7 +753,7 @@
     function getAllAvailableTeams() {
         const allUsers = Object.values(usuariosCadastrados);
         const assignedTeamNames = allUsers
-            .filter(user => user.teamName)
+            .filter(user => user.teamName && user.teamName !== 'Administrador')
             .map(user => user.teamName);
             
         const allBRTeams = Object.keys(teamData); 
@@ -847,7 +858,7 @@
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
 
         const userToDelete = usuariosCadastrados[username];
-        if (!userToDelete) return; // Se o usuário já foi banido ou não existe
+        if (!userToDelete) return; 
 
         const userName = userToDelete.userName;
         const teamName = userToDelete.teamName;
@@ -857,18 +868,13 @@
                 // 1. Deleta o usuário no Firebase
                 await db.collection("users").doc(username).delete();
 
-                // 2. Deleta os posts do usuário (requer mais uma query no Firebase se houver muitos posts)
-                // Por simplicidade, faremos a exclusão no cache e no Firebase para os posts relacionados:
-                posts = posts.filter(post => post.author !== userName && post.author !== teamName);
-                // Você precisaria de um batch delete aqui em um sistema real, mas a exclusão manual no cache é o suficiente para a UI
-                
-                // 3. Atualiza o cache local
+                // 2. Atualiza o cache local (remove o usuário)
                 delete usuariosCadastrados[username];
 
-                // 4. Recarrega os dados completos do Firebase para garantir a sincronia
+                // 3. Recarrega os dados completos do Firebase para garantir a sincronia
                 await loadDataFromFirebase();
                 
-                // 5. Atualiza a UI
+                // 4. Atualiza a UI
                 renderAdminTeamList();
                 renderTeamsList();
                 renderFeed();
@@ -900,7 +906,8 @@
         user.teamName = teamName;
         user.series = teamDetails.series;
         user.logo = teamDetails.logo;
-        user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+        user.stats = defaultStats; // Garante que as estatísticas são zeradas
+        user.username = username; // Adiciona a chave de volta ao objeto para facilidade de uso
 
         // 🚨 Salva no Firebase
         await saveUsersToFirebase(username, user);
@@ -921,7 +928,7 @@
         user.teamName = null;
         user.series = null;
         user.logo = null;
-        user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+        user.stats = defaultStats; // Garante que as estatísticas são zeradas
         
         // 🚨 Salva no Firebase
         await saveUsersToFirebase(username, user);
@@ -933,7 +940,6 @@
     }
 
     function openTeamEditor(username) {
-        // ... (Seu código original de edição de usuário permanece) ...
         const user = usuariosCadastrados[username];
         if (!user || user.isAdmin) return alert('Usuário não encontrado ou é o administrador.');
 
@@ -955,7 +961,10 @@
         // 1. Atualizar posts no CACHE LOCAL (o post.id não muda)
         posts.forEach(post => {
             if (post.author === oldUserName || post.author === user.teamName) {
-                post.author = newUserName; 
+                // Atualiza o nome do autor se o nome de exibição (teamName ou userName) mudou
+                if (post.author === oldUserName) {
+                    post.author = newUserName; 
+                }
                 post.authorPic = newPicUrl; 
             }
         });
@@ -968,39 +977,42 @@
             user.profilePic = newPicUrl;
         }
         
+        // 3. Lógica de atualização de CHAVE
         const newUsernameKey = newUserName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
             const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
             return map[match] || match;
         });
         
-        // 🚨 LÓGICA DE ATUALIZAÇÃO DE CHAVE NO FIREBASE
+        let targetKey = username;
+
         if (newUsernameKey !== username) {
-            // Se a chave mudou, remove o antigo e salva o novo.
+            // Se a chave mudou, remove o antigo, salva o novo, e atualiza o ID do login
             delete usuariosCadastrados[username]; 
             usuariosCadastrados[newUsernameKey] = user;
-            await db.collection("users").doc(username).delete(); // Deleta o ID antigo
+            await db.collection("users").doc(username).delete(); 
             
             if (loggedInUser === username) {
                 loggedInUser = newUsernameKey;
                 localStorage.setItem('loggedInUser', loggedInUser);
             }
+            targetKey = newUsernameKey;
         }
         
         // 🚨 Salva o usuário (novo ou antigo ID) no Firebase
-        await saveUsersToFirebase(newUsernameKey, user);
+        await saveUsersToFirebase(targetKey, user);
         
-        // 🚨 Como o Firebase não tem update em massa para posts, forçamos o recarregamento
+        // 🚨 Recarrega os dados completos do Firebase para sincronizar o feed
         await loadDataFromFirebase();
 
         renderAdminTeamList();
         renderTeamsList();
+        renderClassificationTables();
         renderFeed();
         updateHeaderButtons(loggedInUser);
         alert(`Usuário ${newUserName} atualizado com sucesso!`);
     }
 
     function populateTeamSelects(seriesFilter = null) {
-        // ... (Seu código original permanece) ...
         const time1Select = document.getElementById('jogo-time1');
         const time2Select = document.getElementById('jogo-time2');
         
@@ -1011,6 +1023,7 @@
 
         teams.forEach(team => {
             const option1 = document.createElement('option');
+            // Usamos o username como value para facilitar a busca no objeto usuariosCadastrados
             option1.value = team.username; 
             option1.textContent = team.teamName;
             time1Select.appendChild(option1);
@@ -1033,8 +1046,8 @@
     // FUNÇÃO REGISTRAR RESULTADO ATUALIZADA (AGORA SALVA NO FIREBASE)
     async function registrarResultado() { // AGORA É ASYNC!
         const series = document.getElementById('jogo-series').value;
-        const user1 = document.getElementById('jogo-time1').value;
-        const user2 = document.getElementById('jogo-time2').value;
+        const user1 = document.getElementById('jogo-time1').value; // Username do Time 1
+        const user2 = document.getElementById('jogo-time2').value; // Username do Time 2
         const gols1 = parseInt(document.getElementById('jogo-gols1').value);
         const gols2 = parseInt(document.getElementById('jogo-gols2').value);
 
@@ -1048,7 +1061,7 @@
             return;
         }
 
-        // CÓPIA PARA GARANTIR QUE AS ESTATÍSTICAS ESTEJAM ZERADAS SE NECESSÁRIO
+        // Recupera as estatísticas, garantindo que não são nulas/undefinidas
         const stats1 = usuariosCadastrados[user1].stats;
         const stats2 = usuariosCadastrados[user2].stats;
 
@@ -1111,7 +1124,8 @@
         document.getElementById('perfil-time-serie').textContent = team.series ? `Série: ${team.series}` : 'Série: Aguardando Alocação';
         document.getElementById('perfil-time-user-name').textContent = `Gerenciado por: ${team.userName}`;
 
-        const stats = team.stats || { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+        // Garante o uso de defaultStats se por acaso estiver faltando
+        const stats = team.stats || defaultStats; 
 
         let statsHtml = `
             <table style="width:100%; text-align:left; background:none;">
