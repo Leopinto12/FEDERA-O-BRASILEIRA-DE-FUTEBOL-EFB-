@@ -53,11 +53,27 @@
             max-width: 900px;
             margin: 20px auto;
         }
+        /* Estilo do botão de fechar no admin panel */
+        .close-btn { 
+            position: absolute; 
+            top: 15px; 
+            right: 25px; 
+            font-size: 30px; 
+            font-weight: bold; 
+            color: #ff004c; 
+            cursor: pointer;
+            text-decoration: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .close-btn:hover {
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
     <header>
-        <img src="A_logo_for_\"SUPERLIGA\"_is_presented_in_a_digital_v.png" class="logo" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/uG7b3K8.png" class="logo" alt="Logo Superliga" />
         <h1>SUPERLIGA BRASILEIRA</h1>
         <button onclick="openLogin()" id="header-login-button" style="margin-top: 20px; padding: 10px 20px; background: #f2c94c; border: none; border-radius: 8px; font-weight: bold; color: #050b16; cursor: pointer; box-shadow: 0 0 10px #f2c94c; transition: background 0.3s;">
             ACESSAR CONTA
@@ -156,7 +172,7 @@
 
 <div id="login" class="modal" style="padding-top:120px; text-align:center;">
     <div class="login-box">
-        <img src="A_logo_for_\"SUPERLIGA\"_is_presented_in_a_digital_v.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
         <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">ACESSO DE MEMBRO</h2>
         <input type="text" placeholder="Usuário/E-mail" id="login-user" class="login-input" />
         <input type="password" placeholder="Senha" id="login-pass" class="login-input" />
@@ -172,7 +188,7 @@
 
 <div id="register" class="modal" style="padding-top:120px; text-align:center;">
     <div class="login-box">
-        <img src="A_logo_for_\"SUPERLIGA\"_is_presented_in_a_digital_v.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
         <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO TIME</h2>
         <input type="text" placeholder="Nome do Time (Será seu Nome de Usuário)" id="register-user" class="login-input" />
         <input type="email" placeholder="E-mail do Responsável" id="register-email" class="login-input" />
@@ -189,7 +205,9 @@
 
 <div id="admin-panel" class="modal" style="padding-top:60px;">
     <div class="modal-content">
-        <div class="card" style="margin-bottom: 25px;">
+        <a href="#" onclick="fecharPainelAdmin()" class="close-btn">X</a> 
+
+        <div class="card" style="margin-bottom: 25px; position: relative;">
             <h2 class="title" style="border-color: #ff004c;">⚽ REGISTRAR NOVO JOGO</h2>
             <p style="color: #ccc; margin-bottom: 15px;">Insira o placar da partida para atualizar as classificações.</p>
 
@@ -226,7 +244,7 @@
             <p style="color: #ff004c; font-weight: bold;">Gerencie a alocação dos times nas Séries A e B.</p>
             <div id="admin-teams-list">
                 </div>
-            <button onclick="closeAdminPanel()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
+            <button onclick="fecharPainelAdmin()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
         </div>
     </div>
 </div>
@@ -235,12 +253,82 @@
     // Usuário logado atual
     let loggedInUser = null;
 
-    // --- Data Storage (Simulação de DB com localStorage) ---
-    let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || {
-        'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }, logo: null }
+    // --- Dados dos Times (Série A e B 2025) e Logos ---
+    // Logos são obtidos de fontes de terceiros (Wikipedia, etc.)
+    const teamData = {
+        // --- SÉRIE A ---
+        'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
+        'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
+        'Athletico-PR': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/23/Clube_Athletico-Paranaense_2020.png' },
+        'Bahia': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1d/Esporte_Clube_Bahia.png' },
+        'Botafogo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Botafogo_de_Futebol_e_Regatas_logo.svg' },
+        'Corinthians': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Corinthians_logo.png' },
+        'Criciúma': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1a/Criciúma_Esporte_Clube.png' },
+        'Cruzeiro': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/CruzeiroEsporteClube.png' },
+        'Cuiabá': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d5/Cuiab%C3%A1_Esporte_Clube_-_Escudo.png/50px-Cuiab%C3%A1_Esporte_Clube_-_Escudo.png' },
+        'Flamengo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Flamengo-RJ_%28BRA%29.png' },
+        'Fluminense': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Fluminense_FC_escudo.png' },
+        'Fortaleza': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Fortaleza_Esporte_Clube_novo_logo.png' },
+        'Grêmio': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Gremio_logo.png' },
+        'Internacional': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Escudo_do_Sport_Club_Internacional.svg' },
+        'Juventude': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Juventude_logo.png' },
+        'Palmeiras': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/10/Palmeiras_logo.svg' },
+        'Red Bull Bragantino': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/50/Red_Bull_Bragantino_escudo.png' },
+        'São Paulo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4f/S%C3%A3o_Paulo_Futebol_Clube.png' },
+        'Vasco': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Escudo_do_Club_de_Regatas_Vasco_da_Gama.svg' },
+        'Vitória': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/EC_Vitória_-_Ba.png' },
+        
+        // --- SÉRIE B ---
+        'América-MG': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Am%C3%A9rica_Futebol_Clube_logo.svg' },
+        'Avaí': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/54/Ava%C3%AD_Futebol_Clube.png' },
+        'Botafogo-SP': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/87/Botafogo-SP.png' },
+        'Brusque': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Brusque_FC.png' },
+        'Ceará': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fc/Ceara_SC.png' },
+        'Chapecoense': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Associa%C3%A7%C3%A3o_Chapecoense_de_Futebol.png' },
+        'CRB': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b0/Clube_de_Regatas_Brasil.png' },
+        'Goiás': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Goi%C3%A1s_Esporte_Clube.png' },
+        'Guarani': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/2d/Guarani-SP.png' },
+        'Ituano': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/0/07/Ituano_Futebol_Clube.png' },
+        'Novorizontino': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/11/Gr%C3%AAmio_Novorizontino.png' },
+        'Operário-PR': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/8f/Oper%C3%A1rio_Ferrovi%C3%A1rio_Esporte_Clube.png' },
+        'Paysandu': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Escudo_Paysandu.png' },
+        'Ponte Preta': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/7/7b/Aapp_escudo.png' },
+        'Santos': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b1/Santos_FC_logo.png' },
+        'Sport': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/e/eb/Sport_Club_do_Recife.png' },
+        'Vila Nova': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/d/d4/Vila_Nova_Futebol_Clube.png' },
+        'Amazonas': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d4/Amazonas_FC_logo.png/50px-Amazonas_FC_logo.png' },
+        'Mirassol': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Mirassol_Futebol_Clube.png' },
+        'Goiás': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Goi%C3%A1s_Esporte_Clube.png' },
+        // Nota: O time "Remo" não tem logo fácil de achar em PNG transparente para usar como placeholder.
     };
+
+    // Função que constrói os dados iniciais dos times
+    function initializeTeamData() {
+        const users = {
+            'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }, logo: 'https://i.imgur.com/uG7b3K8.png' }
+        };
+
+        for (const teamName in teamData) {
+            users[teamName.toLowerCase().replace(/\s/g, '')] = { // Cria um username simples
+                email: `${teamName.toLowerCase().replace(/\s/g, '')}@superliga.br`,
+                senha: '123456',
+                isAdmin: false,
+                teamName: teamName,
+                series: teamData[teamName].series,
+                logo: teamData[teamName].logo,
+                stats: { Pontos: 0, Vitórias: 0, Saldo: 0 }
+            };
+        }
+        return users;
+    }
+
+    // --- Data Storage (Simulação de DB com localStorage) ---
+    // Se não houver dados salvos, inicializa com os 40 times + Admin
+    let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || initializeTeamData();
+    
+    // Posts iniciais
     let posts = JSON.parse(localStorage.getItem('superligaPosts')) || [
-        { author: 'admin', content: 'Bem-vindo à nova SUPERLIGA! Cadastre seu time e aguarde o admin alocar as séries.', date: new Date().toLocaleDateString('pt-BR'), image: null }
+        { author: 'Administrador', content: 'Bem-vindo à nova SUPERLIGA! Todos os 40 times da Série A e B foram importados e estão prontos para o jogo!', date: new Date().toLocaleDateString('pt-BR'), image: null }
     ];
 
     // --- Funções de Ajuda ---
@@ -329,6 +417,10 @@
             alert('❌ Nome de time/usuário já cadastrado.');
             return;
         }
+        if (Object.values(usuariosCadastrados).some(u => u.teamName === user)) {
+            alert('❌ Este nome de time já está sendo usado por um time da Série A/B. Por favor, escolha um nome diferente.');
+            return;
+        }
 
         usuariosCadastrados[user] = {
             email: email,
@@ -336,7 +428,7 @@
             isAdmin: false,
             teamName: user,
             series: null,
-            logo: 'https://via.placeholder.com/130/06142e/00ff96?text=LOGO', 
+            logo: 'https://via.placeholder.com/130/06142e/00ff96?text=NOVO', // Logo genérica para novos times
             stats: { Pontos: 0, Vitórias: 0, Saldo: 0 } 
         };
 
@@ -353,6 +445,12 @@
     function closeRegister() { document.getElementById('register').style.display = 'none'; document.body.style.overflow = 'auto'; }
     function closePerfilTime() { document.getElementById('perfil-time').style.display = 'none'; document.body.style.overflow = 'auto'; }
 
+    // --- Função Adicional: Fechar Admin Panel ---
+    function fecharPainelAdmin() {
+        document.getElementById('admin-panel').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
 
     // --- Funções de Publicação (Feed com Prévia) ---
     
@@ -363,13 +461,11 @@
             preview.src = url;
             preview.style.display = 'block';
             
-            // Esconde a imagem se ela não puder ser carregada
             preview.onerror = () => {
                 preview.style.display = 'none';
                 preview.src = '';
             };
             
-            // Garante que a imagem é exibida se for carregada com sucesso
             preview.onload = () => {
                  preview.style.display = 'block';
             };
@@ -409,7 +505,7 @@
         
         input.value = ''; 
         imageUrlInput.value = '';
-        showImagePreview(''); // Limpa a prévia
+        showImagePreview('');
         
         renderFeed();
         alert('Publicação enviada com sucesso!');
@@ -435,9 +531,13 @@
             if (post.image) {
                 imageHtml = `<img src="${post.image}" style="max-width:100%; height:auto; border-radius:8px; margin-top:15px; border: 2px solid #00ff96;" onerror="this.style.display='none'" alt="Imagem do post"/>`;
             }
-
+            
+            const team = Object.values(usuariosCadastrados).find(u => u.teamName === post.author) || {};
+            const logo = team.logo || 'https://via.placeholder.com/30/06142e/00ff96?text=L'; // Logo padrão se não achar
+            
             postElement.innerHTML = `
-                <div class="post-header">
+                <div class="post-header" style="display:flex; align-items:center;">
+                    <img src="${logo}" alt="Logo" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; border: 1px solid #00ff96;">
                     <span class="post-author">${post.author}</span>
                     <span class="post-date"> - ${post.date}</span>
                 </div>
@@ -451,7 +551,6 @@
     // --- Funções de Classificação e Pontuação ---
     function renderClassificationTables() {
         const teams = getAllTeams().filter(team => team.series);
-        // Ordena por Pontos, se igual, por Saldo, se igual, por Vitórias
         const sortTeams = (a, b) => b.stats.Pontos - a.stats.Pontos || b.stats.Saldo - a.stats.Saldo || b.stats.Vitórias - a.stats.Vitórias;
         
         const serieA = teams.filter(t => t.series === 'Série A').sort(sortTeams);
@@ -480,7 +579,8 @@
                 row.setAttribute('data-team', team.username);
                 row.onclick = () => openPerfilTime(team.username);
                 row.innerHTML = `
-                    <td><span class="team-link">${team.teamName}</span></td>
+                    <td><img src="${team.logo}" alt="Logo" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">
+                    <span class="team-link">${team.teamName}</span></td>
                     <td>${team.stats.Pontos}</td>
                     <td>${team.stats.Vitórias}</td>
                     <td>${team.stats.Saldo}</td>
@@ -505,9 +605,10 @@
         teams.forEach(team => {
             const status = team.series ? `(${team.series})` : '(Aguardando alocação)';
             listContainer.innerHTML += `
-                <p>
+                <p style="display:flex; align-items:center;">
+                    <img src="${team.logo}" alt="Logo" style="width: 25px; height: 25px; margin-right: 10px; border-radius: 50%; border: 1px solid #00ff96;">
                     <span class="team-link" onclick="openPerfilTime('${team.username}')">
-                        • ${team.teamName}
+                        ${team.teamName}
                     </span> ${status}
                 </p>
             `;
@@ -523,7 +624,7 @@
         }
 
         renderAdminTeamList();
-        filterTeamsBySeries(''); // Inicializa os selects de times
+        filterTeamsBySeries(''); 
         
         document.getElementById('admin-panel').style.display = 'block';
         document.body.style.overflow = 'hidden';
@@ -545,9 +646,12 @@
             teamElement.style.cssText = 'background: #0a1324; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #00ff96; display: flex; justify-content: space-between; align-items: center;';
 
             teamElement.innerHTML = `
-                <div>
-                    <strong style="color: #00ff96;">${team.teamName}</strong> (Usuário: ${team.username})
-                    <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
+                <div style="display: flex; align-items: center;">
+                    <img src="${team.logo}" alt="Logo" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;">
+                    <div>
+                        <strong style="color: #00ff96;">${team.teamName}</strong> (Usuário: ${team.username})
+                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
+                    </div>
                 </div>
                 <select id="select-${team.username}" onchange="changeTeamSeries('${team.username}', this.value)">
                     <option value="Nenhuma" ${currentSeries === 'Nenhuma' || !currentSeries ? 'selected' : ''}>Nenhuma</option>
