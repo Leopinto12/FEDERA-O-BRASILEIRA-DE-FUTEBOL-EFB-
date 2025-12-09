@@ -69,6 +69,13 @@
         .close-btn:hover {
             color: #ffffff;
         }
+        
+        /* NOVO CSS: REGRAS DE CLASSIFICAÇÃO (Brasileirão - 20 times) */
+        .serie-a tbody tr:nth-child(-n+6) { background: rgba(0, 150, 255, 0.2); } /* Vagas para Libertadores/Sula */
+        .serie-a tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); font-weight: bold; } /* ZONA DE REBAIXAMENTO (17ª a 20ª) */
+
+        .serie-b tbody tr:nth-child(-n+4) { background: rgba(0, 255, 150, 0.25); font-weight: bold; } /* ZONA DE PROMOÇÃO (1ª a 4ª) */
+        .serie-b tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); } /* ZONA DE REBAIXAMENTO (17ª a 20ª) */
     </style>
 </head>
 <body>
@@ -119,7 +126,7 @@
         <div class="card">
             <div class="title">🏆 Série A — Classificação</div>
             <p id="series-a-status">Nenhum time na Série A.</p>
-            <table id="tabela-serie-a" style="display:none;">
+            <table id="tabela-serie-a" class="serie-a" style="display:none;">
                 <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
@@ -128,8 +135,8 @@
         <div class="card">
             <div class="title">💠 Série B — Classificação</div>
             <p id="series-b-status">Nenhum time na Série B.</p>
-            <table id="tabela-serie-b" style="display:none;">
-                 <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
+             <table id="tabela-serie-b" class="serie-b" style="display:none;">
+                <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -150,7 +157,7 @@
 
 <div id="perfil-time" class="modal">
     <div class="modal-header">
-        <img id="perfil-time-logo" src="" class="modal-logo" alt="Logo do Time" style="width: 130px; filter: drop-shadow(0 0 10px #000); border-radius: 50%; border: 5px solid #fff; object-fit: cover;"/>
+        <img id="perfil-time-logo" src="" class="modal-logo" alt="Logo do Time" style="width: 130px; height: 130px; filter: drop-shadow(0 0 10px #000); border-radius: 50%; border: 5px solid #fff; object-fit: cover;"/>
         <h2 id="perfil-time-nome" style="margin-top:15px; font-size:2rem; color:white; text-shadow:0 0 10px #000;"></h2>
         <p id="perfil-time-serie" style="color:#f2c94c; font-weight: bold;"></p>
     </div>
@@ -243,8 +250,8 @@
         </div>
         
         <div class="card">
-            <h2 class="title" style="border-color: #ff004c;">👥 ALOCAÇÃO DE TIMES</h2>
-            <p style="color: #ff004c; font-weight: bold;">Gerencie a alocação dos times nas Séries A e B.</p>
+            <h2 class="title" style="border-color: #ff004c;">👥 GESTÃO E ALOCAÇÃO DE TIMES</h2>
+            <p style="color: #ff004c; font-weight: bold;">Edite, aloque ou remova (ban) times do sistema.</p>
             <div id="admin-teams-list">
                 </div>
             <button onclick="fecharPainelAdmin()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
@@ -303,7 +310,7 @@
         'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
     };
 
-    // Função que constrói os dados iniciais dos times (ATUALIZADA com todas as stats)
+    // Função que constrói os dados iniciais dos times (COMPLETA)
     function initializeTeamData() {
         const users = {
             'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, logo: 'https://i.imgur.com/uG7b3K8.png', stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } }
@@ -322,7 +329,7 @@
                 teamName: teamName,
                 series: teamData[teamName].series,
                 logo: teamData[teamName].logo,
-                // NOVO OBJETO DE ESTATÍSTICAS COMPLETO
+                // OBJETO DE ESTATÍSTICAS COMPLETO
                 stats: { 
                     Pontos: 0, 
                     Jogos: 0, 
@@ -358,6 +365,14 @@
         if (storedUser && usuariosCadastrados[storedUser]) {
             loggedInUser = storedUser;
         }
+
+        // Correção para dados antigos: Se faltarem stats, reinicializa. (Não substitui a limpeza manual!)
+        getAllTeams().forEach(team => {
+            if (!team.stats || team.stats.GolsPro === undefined) {
+                 usuariosCadastrados[team.username].stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+            }
+        });
+        saveUsers(); // Salva a correção se necessário
 
         updateHeaderButtons(loggedInUser); 
         renderFeed();
@@ -444,7 +459,7 @@
             alert('🚨 Por favor, preencha todos os campos obrigatórios e use uma senha de no mínimo 6 caracteres.');
             return;
         }
-        if (Object.keys(usuariosCadastrados).includes(user)) {
+        if (Object.keys(usuariosCadastrados).includes(user.toLowerCase())) {
             alert('❌ Nome de time/usuário já cadastrado.');
             return;
         }
@@ -453,14 +468,14 @@
             return;
         }
 
-        usuariosCadastrados[user] = {
+        usuariosCadastrados[user.toLowerCase()] = {
             email: email,
             senha: pass,
             isAdmin: false,
             teamName: user,
             series: null,
             logo: logoUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=NOVO', 
-            // NOVO OBJETO DE ESTATÍSTICAS COMPLETO
+            // OBJETO DE ESTATÍSTICAS COMPLETO
             stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 }
         };
 
@@ -511,6 +526,20 @@
         alert('✅ Post publicado com sucesso!');
     }
 
+    // FUNÇÃO DELETAR POST (NOVA ADMIN)
+    function deletePost(index) {
+        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) {
+            alert('Acesso negado. Apenas o administrador pode excluir posts.');
+            return;
+        }
+        if (confirm('Tem certeza que deseja excluir esta publicação?')) {
+            posts.splice(index, 1); // Remove 1 elemento no índice
+            savePosts();
+            renderFeed();
+            alert('Publicação excluída.');
+        }
+    }
+
     function renderFeed() {
         const feedContainer = document.getElementById('feed-posts');
         feedContainer.innerHTML = '';
@@ -522,6 +551,12 @@
 
         posts.forEach(post => {
             let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
+            
+            // Botão de Excluir Admin (NOVO)
+            let adminDeleteBtn = '';
+            if (loggedInUser && usuariosCadastrados[loggedInUser].isAdmin) {
+                adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost(${posts.indexOf(post)})">Excluir</span>`;
+            }
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
@@ -529,6 +564,7 @@
                 <div class="post-header">
                     <span class="post-author">${post.author}</span>
                     <span class="post-date">${post.date}</span>
+                    ${adminDeleteBtn} 
                 </div>
                 <div class="post-content">
                     ${post.content.replace(/\n/g, '<br>')}
@@ -539,7 +575,7 @@
         });
     }
 
-    // --- Funções de Classificação (ATUALIZADA para exibir 8 colunas) ---
+    // --- Funções de Classificação ---
     function sortTeams(a, b) {
         // 1. Pontos
         if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
@@ -602,15 +638,15 @@
             });
         };
 
-        // Adicionando a coluna de Posição ao Thead
+        // Adicionando a coluna de Posição ao Thead (Apenas se não existir)
         const updateHeader = (tableId) => {
             const thead = document.querySelector(`#${tableId} thead tr`);
-            if (thead.cells.length === 9) return; // Já tem 9 colunas
-
-            const newTh = document.createElement('th');
-            newTh.textContent = '#';
-            thead.insertBefore(newTh, thead.firstChild); 
-            
+            // Se o primeiro TH não for o '#'
+            if (thead.cells.length === 8) { 
+                const newTh = document.createElement('th');
+                newTh.textContent = '#';
+                thead.insertBefore(newTh, thead.firstChild); 
+            }
             // Corrige o cabeçalho do Time que moveu a posição
             thead.cells[1].textContent = 'Time';
             thead.cells[1].style.textAlign = 'left'; 
@@ -623,7 +659,7 @@
         renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
 
-    // --- Funções de Gestão Admin ---
+    // --- Funções de Gestão Admin (ATUALIZADAS) ---
     function renderTeamsList() {
         const teamsList = document.getElementById('times-list');
         teamsList.innerHTML = '';
@@ -667,21 +703,25 @@
         teams.forEach(team => {
             const currentSeries = team.series || 'Nenhuma';
             const teamElement = document.createElement('div');
-            teamElement.style.cssText = 'background: #0a1324; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #00ff96; display: flex; justify-content: space-between; align-items: center;';
+            teamElement.style.cssText = 'background: #0a1324; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #00ff96; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;';
 
             teamElement.innerHTML = `
-                <div style="display: flex; align-items: center;">
+                <div style="display: flex; align-items: center; width: 40%;">
                     <img src="${team.logo}" alt="Logo" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;">
                     <div>
                         <strong style="color: #00ff96;">${team.teamName}</strong>
                         <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
                     </div>
                 </div>
-                <select id="select-${team.username}" onchange="changeTeamSeries('${team.username}', this.value)">
-                    <option value="Nenhuma" ${currentSeries === 'Nenhuma' || !currentSeries ? 'selected' : ''}>Nenhuma</option>
-                    <option value="Série A" ${currentSeries === 'Série A' ? 'selected' : ''}>Série A</option>
-                    <option value="Série B" ${currentSeries === 'Série B' ? 'selected' : ''}>Série B</option>
-                </select>
+                <div style="display: flex; gap: 8px; align-items: center; width: 55%; justify-content: flex-end;">
+                    <select id="select-${team.username}" onchange="changeTeamSeries('${team.username}', this.value)" style="padding: 5px; border-radius: 5px;">
+                        <option value="Nenhuma" ${currentSeries === 'Nenhuma' || !currentSeries ? 'selected' : ''}>Nenhuma</option>
+                        <option value="Série A" ${currentSeries === 'Série A' ? 'selected' : ''}>Série A</option>
+                        <option value="Série B" ${currentSeries === 'Série B' ? 'selected' : ''}>Série B</option>
+                    </select>
+                    <button onclick="openTeamEditor('${team.username}')" style="background: #f2c94c; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Editar</button>
+                    <button onclick="banTeam('${team.username}')" style="background: #ff004c; color: #ffffff; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Banir</button>
+                </div>
             `;
             adminList.appendChild(teamElement);
         });
@@ -692,8 +732,8 @@
             usuariosCadastrados[username].series = null;
         } else {
             usuariosCadastrados[username].series = newSeries;
-            // Garante que o objeto stats existe na nova estrutura
-            if (!usuariosCadastrados[username].stats || !usuariosCadastrados[username].stats.Jogos) {
+            // Garante que o objeto stats exista na nova estrutura
+            if (!usuariosCadastrados[username].stats || usuariosCadastrados[username].stats.GolsPro === undefined) {
                  usuariosCadastrados[username].stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
             }
         }
@@ -702,6 +742,73 @@
         renderAdminTeamList(); 
         renderClassificationTables(); // Atualiza a tabela imediatamente
     }
+
+    function openTeamEditor(username) {
+        const team = usuariosCadastrados[username];
+        if (!team || team.isAdmin) return alert('Time não encontrado ou é o administrador.');
+
+        const newName = prompt(`Editar nome do time "${team.teamName}". Novo nome:`, team.teamName);
+        if (newName === null || newName.trim() === '') return;
+
+        const newLogo = prompt(`Editar URL do Logo de "${team.teamName}". Nova URL:`, team.logo);
+        if (newLogo === null) return;
+        
+        finalizeTeamEdit(username, newName, newLogo);
+    }
+
+    function finalizeTeamEdit(username, newName, newLogo) {
+        const team = usuariosCadastrados[username];
+        
+        // 1. Atualizar posts
+        posts.forEach(post => {
+            if (post.author === team.teamName) {
+                post.author = newName;
+            }
+        });
+
+        // 2. Criar novo objeto de usuário e excluir o antigo
+        const newUsername = newName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
+            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
+            return map[match] || match;
+        });
+        
+        if (newUsername !== username) {
+            delete usuariosCadastrados[username]; 
+            usuariosCadastrados[newUsername] = { ...team, teamName: newName, logo: newLogo };
+        } else {
+            usuariosCadastrados[username].teamName = newName;
+            usuariosCadastrados[username].logo = newLogo;
+        }
+        
+        saveUsers();
+        savePosts();
+        renderAdminTeamList();
+        renderClassificationTables();
+        renderFeed();
+        alert(`Time ${newName} atualizado com sucesso!`);
+    }
+
+    function banTeam(username) {
+        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
+
+        const teamName = usuariosCadastrados[username].teamName;
+        if (confirm(`Tem certeza que deseja BANIR o time ${teamName}? Isso é irreversível. Todos os posts serão excluídos.`)) {
+            
+            // Remove posts do time
+            posts = posts.filter(post => post.author !== teamName);
+            
+            // Remove o usuário
+            delete usuariosCadastrados[username];
+
+            saveUsers();
+            savePosts();
+            renderAdminTeamList();
+            renderClassificationTables();
+            renderFeed();
+            alert(`Time ${teamName} e seus posts foram permanentemente removidos.`);
+        }
+    }
+
 
     function populateTeamSelects(seriesFilter = null) {
         const time1Select = document.getElementById('jogo-time1');
