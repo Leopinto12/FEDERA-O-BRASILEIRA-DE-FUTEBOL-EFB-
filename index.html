@@ -82,7 +82,14 @@
                 <h3 style="color:#f2c94c;">O que está acontecendo na Superliga?</h3>
                 <textarea id="post-input" placeholder="Publique uma notícia ou atualização do seu time..." maxlength="300"></textarea>
                 
-                <input type="url" id="post-image-url" placeholder="URL da Imagem (opcional)" class="login-input" style="width: 96%; margin-top: 10px;"/>
+                <input type="url" id="post-image-url" 
+                       placeholder="URL da Imagem (opcional)" 
+                       class="login-input" 
+                       style="width: 96%; margin-top: 10px;"
+                       oninput="showImagePreview(this.value)" 
+                />
+                
+                <img id="image-preview" src="" alt="Prévia da Imagem" style="display:none; max-width: 96%; height: auto; margin-top: 10px; border-radius: 5px; border: 2px solid #f2c94c;">
                 
                 <button onclick="publishPost()" class="action-button" style="width: auto; padding: 10px 20px; margin-top: 10px;">Publicar</button>
             </div>
@@ -347,7 +354,32 @@
     function closePerfilTime() { document.getElementById('perfil-time').style.display = 'none'; document.body.style.overflow = 'auto'; }
 
 
-    // --- Funções de Publicação (Feed) ---
+    // --- Funções de Publicação (Feed com Prévia) ---
+    
+    function showImagePreview(url) {
+        const preview = document.getElementById('image-preview');
+        
+        if (url && url.length > 5 && (url.startsWith('http') || url.startsWith('https'))) {
+            preview.src = url;
+            preview.style.display = 'block';
+            
+            // Esconde a imagem se ela não puder ser carregada
+            preview.onerror = () => {
+                preview.style.display = 'none';
+                preview.src = '';
+            };
+            
+            // Garante que a imagem é exibida se for carregada com sucesso
+            preview.onload = () => {
+                 preview.style.display = 'block';
+            };
+
+        } else {
+            preview.style.display = 'none';
+            preview.src = '';
+        }
+    }
+
     function publishPost() {
         const input = document.getElementById('post-input');
         const imageUrlInput = document.getElementById('post-image-url');
@@ -377,6 +409,7 @@
         
         input.value = ''; 
         imageUrlInput.value = '';
+        showImagePreview(''); // Limpa a prévia
         
         renderFeed();
         alert('Publicação enviada com sucesso!');
@@ -400,7 +433,6 @@
             
             let imageHtml = '';
             if (post.image) {
-                // Adiciona a imagem, com fallback se a URL for inválida
                 imageHtml = `<img src="${post.image}" style="max-width:100%; height:auto; border-radius:8px; margin-top:15px; border: 2px solid #00ff96;" onerror="this.style.display='none'" alt="Imagem do post"/>`;
             }
 
@@ -532,7 +564,6 @@
             usuariosCadastrados[username].series = null;
         } else {
             usuariosCadastrados[username].series = newSeries;
-            // Garante que o time tenha stats ao ser alocado (caso tenha limpado localStorage)
             if (!usuariosCadastrados[username].stats) {
                  usuariosCadastrados[username].stats = { Pontos: 0, Vitórias: 0, Saldo: 0 };
             }
