@@ -22,7 +22,6 @@
         tr:nth-child(even) { background: rgba(255,255,255,0.02); }
         tr:hover { background: rgba(0,255,150,0.1); cursor: pointer; }
         .team-link { cursor: pointer; color: #f2c94c; font-weight: bold; text-shadow: 0 0 3px #f2c94c; transition: color 0.2s; }
-        .action-button { width: 100%; padding: 15px; background: #00ff96; border: none; border-radius: 10px; margin-top: 5px; font-size: 1.1rem; font-weight: bold; color: #050b16; box-shadow: 0 0 15px #00ff96; cursor: pointer; transition: background 0.3s, transform 0.2s; }
         .link-switch { color:#f2c94c; text-decoration:none; cursor: pointer; font-weight: bold; transition: color 0.2s; }
 
         /* Estilo dos Posts e Formulário de Publicação */
@@ -103,7 +102,7 @@
 
             <div id="post-form-container" style="display:none; margin-bottom: 30px; padding: 15px; background: #06142e; border-radius: 10px; border: 1px solid #f2c94c;">
                 <h3 style="color:#f2c94c;">O que está acontecendo na Superliga?</h3>
-                <textarea id="post-input" placeholder="Publique uma notícia ou atualização do seu time..." maxlength="300"></textarea>
+                <textarea id="post-input" placeholder="Publique uma notícia, atualização ou mensagem..." maxlength="300"></textarea>
                 
                 <input type="url" id="post-image-url" 
                        placeholder="URL da Imagem (opcional)" 
@@ -127,7 +126,7 @@
             <div class="title">🏆 Série A — Classificação</div>
             <p id="series-a-status">Nenhum time na Série A.</p>
             <table id="tabela-serie-a" class="serie-a" style="display:none;">
-                <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
+                <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -136,7 +135,7 @@
             <div class="title">💠 Série B — Classificação</div>
             <p id="series-b-status">Nenhum time na Série B.</p>
              <table id="tabela-serie-b" class="serie-b" style="display:none;">
-                <thead><tr><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
+                <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -144,9 +143,9 @@
 
     <div class="container" id="times">
         <div class="card">
-            <div class="title">🛡️ Times Cadastrados</div>
+            <div class="title">🛡️ Times Vinculados</div>
             <div id="times-list">
-                <p>Nenhum time cadastrado além do administrador.</p>
+                <p>Nenhum time vinculado além do administrador.</p>
             </div>
         </div>
     </div>
@@ -160,6 +159,7 @@
         <img id="perfil-time-logo" src="" class="modal-logo" alt="Logo do Time" style="width: 130px; height: 130px; filter: drop-shadow(0 0 10px #000); border-radius: 50%; border: 5px solid #fff; object-fit: cover;"/>
         <h2 id="perfil-time-nome" style="margin-top:15px; font-size:2rem; color:white; text-shadow:0 0 10px #000;"></h2>
         <p id="perfil-time-serie" style="color:#f2c94c; font-weight: bold;"></p>
+        <p id="perfil-time-user-name" style="color:#00ff96; font-size: 0.9em;"></p>
     </div>
 
     <div class="modal-content">
@@ -196,14 +196,14 @@
 <div id="register" class="modal" style="padding-top:120px; text-align:center;">
     <div class="login-box">
         <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
-        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO TIME</h2>
+        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO MEMBRO</h2>
         
-        <input type="url" placeholder="URL do Logo do Time (Opcional)" id="register-logo" class="login-input" />
+        <input type="url" placeholder="URL da Foto de Perfil (Opcional)" id="register-profile-pic" class="login-input" />
         
-        <input type="text" placeholder="Nome do Time (Será seu Nome de Usuário)" id="register-user" class="login-input" />
-        <input type="email" placeholder="E-mail do Responsável" id="register-email" class="login-input" />
+        <input type="text" placeholder="Nome de Usuário (Será seu nome no feed)" id="register-user" class="login-input" />
+        <input type="email" placeholder="E-mail do Membro" id="register-email" class="login-input" />
         <input type="password" placeholder="Senha (Mínimo 6 caracteres)" id="register-pass" class="login-input" />
-        <button onclick="fazerCadastro()" class="action-button">CADASTRAR TIME</button>
+        <button onclick="fazerCadastro()" class="action-button">CADASTRAR MEMBRO</button>
         <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
             Já é membro? <a class="link-switch" onclick="openLogin()">Voltar ao Login</a>.
         </p>
@@ -250,8 +250,8 @@
         </div>
         
         <div class="card">
-            <h2 class="title" style="border-color: #ff004c;">👥 GESTÃO E ALOCAÇÃO DE TIMES</h2>
-            <p style="color: #ff004c; font-weight: bold;">Edite, aloque ou remova (ban) times do sistema.</p>
+            <h2 class="title" style="border-color: #ff004c;">👥 GESTÃO E VINCULAÇÃO DE MEMBROS</h2>
+            <p style="color: #ff004c; font-weight: bold;">Vincule usuários aos times das Séries A e B.</p>
             <div id="admin-teams-list">
                 </div>
             <button onclick="fecharPainelAdmin()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
@@ -313,50 +313,37 @@
     // Função que constrói os dados iniciais dos times (COMPLETA)
     function initializeTeamData() {
         const users = {
-            'admin': { email: 'admin@superliga.br', senha: '123', isAdmin: true, teamName: 'Administrador', series: null, logo: 'https://i.imgur.com/uG7b3K8.png', stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } }
+            'admin': { 
+                email: 'admin@superliga.br', 
+                senha: '123', 
+                isAdmin: true, 
+                userName: 'Administrador Principal', // Nome do admin
+                teamName: 'Administrador', 
+                series: null, 
+                logo: 'https://i.imgur.com/uG7b3K8.png', 
+                profilePic: 'https://i.imgur.com/uG7b3K8.png', 
+                stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 } 
+            }
         };
-
-        for (const teamName in teamData) {
-            const username = teamName.toLowerCase().replace(/\s/g, '').replace(/-/g, '').replace(/[áéíóúãõç]/g, match => {
-                const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
-                return map[match] || match;
-            });
-            
-            users[username] = {
-                email: `${username}@superliga.br`,
-                senha: '123456',
-                isAdmin: false,
-                teamName: teamName,
-                series: teamData[teamName].series,
-                logo: teamData[teamName].logo,
-                // OBJETO DE ESTATÍSTICAS COMPLETO
-                stats: { 
-                    Pontos: 0, 
-                    Jogos: 0, 
-                    Vitórias: 0, 
-                    Empates: 0, 
-                    Derrotas: 0, 
-                    GolsPro: 0, 
-                    GolsContra: 0, 
-                    Saldo: 0 
-                }
-            };
-        }
+        // Aqui não criamos mais times, pois eles serão vinculados manualmente pelo admin.
+        // A lista de `teamData` serve apenas como referência para a vinculação.
         return users;
     }
 
     // --- Data Storage (Simulação de DB com localStorage) ---
     let usuariosCadastrados = JSON.parse(localStorage.getItem('superligaUsers')) || initializeTeamData();
     let posts = JSON.parse(localStorage.getItem('superligaPosts')) || [
-        { author: 'Administrador', content: 'Bem-vindo à nova SUPERLIGA! Todos os 40 times da Série A e B foram importados e estão prontos para o jogo!', date: new Date().toLocaleDateString('pt-BR'), image: null }
+        { author: 'Administrador Principal', content: 'Bem-vindo à nova SUPERLIGA! O administrador deve vincular os times aos usuários no painel de gestão.', date: new Date().toLocaleDateString('pt-BR'), image: null, authorPic: 'https://i.imgur.com/uG7b3K8.png' }
     ];
 
     // --- Funções de Ajuda e Inicialização ---
     function saveUsers() { localStorage.setItem('superligaUsers', JSON.stringify(usuariosCadastrados)); }
     function savePosts() { localStorage.setItem('superligaPosts', JSON.stringify(posts)); }
+    
+    // Filtra apenas usuários que TÊM um time vinculado (para a tabela e lista pública)
     function getAllTeams() {
         return Object.keys(usuariosCadastrados)
-            .filter(user => user !== 'admin' && !usuariosCadastrados[user].isAdmin)
+            .filter(user => usuariosCadastrados[user].teamName) // Filtra quem tem time
             .map(user => ({ username: user, ...usuariosCadastrados[user] }));
     }
 
@@ -366,10 +353,13 @@
             loggedInUser = storedUser;
         }
 
-        // Correção para dados antigos: Se faltarem stats, reinicializa. (Não substitui a limpeza manual!)
-        getAllTeams().forEach(team => {
-            if (!team.stats || team.stats.GolsPro === undefined) {
-                 usuariosCadastrados[team.username].stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+        // Correção para dados antigos: Garante que todos os usuários tenham os novos campos
+        Object.keys(usuariosCadastrados).forEach(userKey => {
+            const user = usuariosCadastrados[userKey];
+            if (user.userName === undefined) user.userName = user.teamName || userKey;
+            if (user.profilePic === undefined) user.profilePic = user.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=👤';
+            if (user.stats === undefined || user.stats.GolsPro === undefined) {
+                 user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
             }
         });
         saveUsers(); // Salva a correção se necessário
@@ -408,7 +398,7 @@
         const postForm = document.getElementById('post-form-container');
 
         if (user) {
-            loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].teamName})`;
+            loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].userName || usuariosCadastrados[user].teamName})`;
             loginBtn.onclick = fazerLogout;
             if (usuariosCadastrados[user].isAdmin) {
                 adminBtn.style.display = 'inline-block';
@@ -436,7 +426,7 @@
             localStorage.setItem('loggedInUser', loggedInUser); 
             closeLogin();
             updateHeaderButtons(loggedInUser);
-            alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].teamName}.`);
+            alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
         } else {
             alert('❌ Credenciais incorretas. Verifique seu Usuário/E-mail e Senha.');
         }
@@ -450,8 +440,9 @@
     }
 
     function fazerCadastro() {
-        const logoUrl = document.getElementById('register-logo').value.trim(); 
-        const user = document.getElementById('register-user').value.trim();
+        // Agora aceita FOTO DE PERFIL e NOME DE USUÁRIO
+        const profilePicUrl = document.getElementById('register-profile-pic').value.trim(); 
+        const user = document.getElementById('register-user').value.trim(); // Nome do Usuário de Exibição
         const email = document.getElementById('register-email').value.trim();
         const pass = document.getElementById('register-pass').value.trim();
 
@@ -459,28 +450,34 @@
             alert('🚨 Por favor, preencha todos os campos obrigatórios e use uma senha de no mínimo 6 caracteres.');
             return;
         }
-        if (Object.keys(usuariosCadastrados).includes(user.toLowerCase())) {
-            alert('❌ Nome de time/usuário já cadastrado.');
-            return;
-        }
-        if (Object.values(usuariosCadastrados).some(u => u.teamName === user)) {
-            alert('❌ Este nome de time já está sendo usado. Por favor, escolha um nome diferente.');
+        
+        // Usamos o username em minúsculo, sem espaço e acentos, como chave de acesso
+        const usernameKey = user.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
+            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
+            return map[match] || match;
+        });
+        
+        if (Object.keys(usuariosCadastrados).includes(usernameKey)) {
+            alert('❌ Nome de usuário já cadastrado. Tente adicionar um sobrenome ou número.');
             return;
         }
 
-        usuariosCadastrados[user.toLowerCase()] = {
+        usuariosCadastrados[usernameKey] = {
             email: email,
             senha: pass,
             isAdmin: false,
-            teamName: user,
+            userName: user, // Novo campo: Nome de exibição
+            profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
+            
+            // Dados de time são nulos por padrão
+            teamName: null, 
             series: null,
-            logo: logoUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=NOVO', 
-            // OBJETO DE ESTATÍSTICAS COMPLETO
+            logo: null, 
             stats: { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 }
         };
 
         saveUsers();
-        alert(`🎉 Time "${user}" cadastrado com sucesso!`);
+        alert(`🎉 Usuário "${user}" cadastrado com sucesso!`);
         closeRegister();
         openLogin();
     }
@@ -498,10 +495,19 @@
     }
 
     function publishPost() {
-        if (!loggedInUser || usuariosCadastrados[loggedInUser].isAdmin) {
-            alert('🚨 Somente times podem publicar posts no Feed.');
+        if (!loggedInUser) {
+            alert('🚨 Você precisa estar logado para publicar.');
             return;
         }
+        
+        const currentUser = usuariosCadastrados[loggedInUser];
+        
+        // Se não for admin, verifica se possui um time vinculado.
+        if (!currentUser.isAdmin && !currentUser.teamName) {
+             alert('🚨 Sua conta precisa ser vinculada a um time pelo Administrador para publicar.');
+             return;
+        }
+
         const postContent = document.getElementById('post-input').value.trim();
         const postImage = document.getElementById('post-image-url').value.trim();
 
@@ -510,14 +516,19 @@
             return;
         }
 
+        // O autor do post será o nome do time (se houver) ou o nome de usuário (se for admin)
+        const authorName = currentUser.teamName || currentUser.userName;
+        const authorImage = currentUser.logo || currentUser.profilePic;
+
         const newPost = {
-            author: usuariosCadastrados[loggedInUser].teamName,
+            author: authorName,
             content: postContent,
             date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
-            image: postImage || null
+            image: postImage || null,
+            authorPic: authorImage // Nova info para mostrar a imagem no feed
         };
 
-        posts.unshift(newPost); // Adiciona no início da lista
+        posts.unshift(newPost);
         savePosts();
         document.getElementById('post-input').value = '';
         document.getElementById('post-image-url').value = '';
@@ -526,7 +537,7 @@
         alert('✅ Post publicado com sucesso!');
     }
 
-    // FUNÇÃO DELETAR POST (NOVA ADMIN)
+    // FUNÇÃO DELETAR POST (ADMIN)
     function deletePost(index) {
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) {
             alert('Acesso negado. Apenas o administrador pode excluir posts.');
@@ -552,16 +563,20 @@
         posts.forEach(post => {
             let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
             
-            // Botão de Excluir Admin (NOVO)
+            // Botão de Excluir Admin
             let adminDeleteBtn = '';
             if (loggedInUser && usuariosCadastrados[loggedInUser].isAdmin) {
                 adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost(${posts.indexOf(post)})">Excluir</span>`;
             }
+            
+            // Use a imagem do autor (logo do time ou profile pic)
+            const authorPic = post.authorPic || 'https://via.placeholder.com/30/06142e/00ff96?text=P';
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
             postElement.innerHTML = `
-                <div class="post-header">
+                <div class="post-header" style="display: flex; align-items: center;">
+                    <img src="${authorPic}" alt="Perfil" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%; border: 1px solid #00ff96; object-fit: cover;">
                     <span class="post-author">${post.author}</span>
                     <span class="post-date">${post.date}</span>
                     ${adminDeleteBtn} 
@@ -588,6 +603,7 @@
     }
 
     function renderClassificationTables() {
+        // Pega apenas times vinculados
         const teams = getAllTeams().filter(team => team.series);
 
         const serieA = teams.filter(t => t.series === 'Série A').sort(sortTeams);
@@ -638,35 +654,32 @@
             });
         };
 
-        // Adicionando a coluna de Posição ao Thead (Apenas se não existir)
-        const updateHeader = (tableId) => {
-            const thead = document.querySelector(`#${tableId} thead tr`);
-            // Se o primeiro TH não for o '#'
-            if (thead.cells.length === 8) { 
-                const newTh = document.createElement('th');
-                newTh.textContent = '#';
-                thead.insertBefore(newTh, thead.firstChild); 
-            }
-            // Corrige o cabeçalho do Time que moveu a posição
-            thead.cells[1].textContent = 'Time';
-            thead.cells[1].style.textAlign = 'left'; 
-        };
-
-        updateHeader('tabela-serie-a');
-        updateHeader('tabela-serie-b');
-
         renderTable('tabela-serie-a', serieA, 'series-a-status');
         renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
 
-    // --- Funções de Gestão Admin (ATUALIZADAS) ---
+    // --- Funções de Gestão Admin (V3.2: Foco em Usuário e Vinculação) ---
+    
+    function getAllAvailableTeams() {
+        const allUsers = Object.values(usuariosCadastrados);
+        const assignedTeamNames = allUsers
+            .filter(user => user.teamName)
+            .map(user => user.teamName);
+            
+        const allBRTeams = Object.keys(teamData); 
+        
+        // Retorna a lista de times que NÃO estão vinculados
+        return allBRTeams.filter(teamName => !assignedTeamNames.includes(teamName));
+    }
+
     function renderTeamsList() {
         const teamsList = document.getElementById('times-list');
         teamsList.innerHTML = '';
+        // Mostra APENAS times que estão vinculados a um usuário
         const teams = getAllTeams().sort((a, b) => a.teamName.localeCompare(b.teamName));
 
         if (teams.length === 0) {
-            teamsList.innerHTML = '<p>Nenhum time cadastrado além do administrador.</p>';
+            teamsList.innerHTML = '<p>Nenhum time vinculado a um usuário ainda.</p>';
             return;
         }
 
@@ -682,6 +695,7 @@
                     <div>
                         <strong style="color: #00ff96;">${team.teamName}</strong>
                         <p style="margin: 0; font-size: 0.9em; color: #ccc;">Série: ${team.series || 'Nenhuma'}</p>
+                        <p style="margin: 0; font-size: 0.8em; color: #f2c94c;">Gerenciado por: ${team.userName}</p>
                     </div>
                 </div>
                 <span style="color: #f2c94c; font-weight: bold;">P: ${team.stats.Pontos || 0}</span>
@@ -693,109 +707,78 @@
     function renderAdminTeamList() {
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
-        const teams = getAllTeams();
+        // Filtra apenas usuários que não são Admin
+        const users = Object.keys(usuariosCadastrados)
+            .filter(u => u !== 'admin')
+            .map(u => ({ username: u, ...usuariosCadastrados[u] }))
+            .sort((a, b) => (a.userName || '').localeCompare(b.userName || ''));
+        
+        const availableTeams = getAllAvailableTeams();
 
-        if (teams.length === 0) {
-            adminList.innerHTML = '<p style="color:#ccc;">Não há times para gerenciar.</p>';
+        if (users.length === 0) {
+            adminList.innerHTML = '<p style="color:#ccc;">Não há usuários/times para gerenciar.</p>';
             return;
         }
 
-        teams.forEach(team => {
-            const currentSeries = team.series || 'Nenhuma';
+        users.forEach(user => {
+            const currentSeries = user.series || 'Nenhuma';
+            const teamName = user.teamName || 'Não Vinculado';
+
             const teamElement = document.createElement('div');
             teamElement.style.cssText = 'background: #0a1324; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #00ff96; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;';
 
+            let actionHtml = '';
+            if (user.teamName) {
+                // Se já tem time, mostra o desvínculo e a gestão
+                actionHtml = `
+                    <p style="margin: 5px 0 0; font-size: 0.9em; color: #00ff96;">Time: <b>${user.teamName} (${currentSeries})</b></p>
+                    <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
+                        <button onclick="unlinkTeam('${user.username}')" style="background: #ff004c; color: #ffffff; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Desvincular</button>
+                        <button onclick="openTeamEditor('${user.username}')" style="background: #f2c94c; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Editar Usuário/Time</button>
+                    </div>
+                `;
+            } else {
+                // Se não tem time, mostra a opção de vincular
+                let selectOptions = availableTeams.map(name => `<option value="${name}">${name}</option>`).join('');
+                actionHtml = `
+                    <p style="margin: 5px 0 0; font-size: 0.9em; color: #ff004c;">Status: **NÃO VINCULADO**</p>
+                    <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
+                        <select id="select-team-${user.username}" style="padding: 5px; border-radius: 5px;">
+                            <option value="">-- Vincular Time --</option>
+                            ${selectOptions}
+                        </select>
+                        <button onclick="linkTeam('${user.username}')" style="background: #00ff96; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Vincular</button>
+                    </div>
+                `;
+            }
+            
             teamElement.innerHTML = `
-                <div style="display: flex; align-items: center; width: 40%;">
-                    <img src="${team.logo}" alt="Logo" style="width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;">
+                <div style="display: flex; align-items: center; width: 100%;">
+                    <img src="${user.profilePic}" alt="Perfil" style="width: 40px; height: 40px; margin-right: 10px; border-radius: 50%; border: 2px solid #f2c94c; object-fit: cover;">
                     <div>
-                        <strong style="color: #00ff96;">${team.teamName}</strong>
-                        <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">Série Atual: <b>${currentSeries}</b></p>
+                        <strong style="color: #f2c94c;">${user.userName}</strong>
+                        <p style="margin: 0; font-size: 0.8em; color: #ccc;">Chave de Acesso: ${user.username}</p>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center; width: 55%; justify-content: flex-end;">
-                    <select id="select-${team.username}" onchange="changeTeamSeries('${team.username}', this.value)" style="padding: 5px; border-radius: 5px;">
-                        <option value="Nenhuma" ${currentSeries === 'Nenhuma' || !currentSeries ? 'selected' : ''}>Nenhuma</option>
-                        <option value="Série A" ${currentSeries === 'Série A' ? 'selected' : ''}>Série A</option>
-                        <option value="Série B" ${currentSeries === 'Série B' ? 'selected' : ''}>Série B</option>
-                    </select>
-                    <button onclick="openTeamEditor('${team.username}')" style="background: #f2c94c; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Editar</button>
-                    <button onclick="banTeam('${team.username}')" style="background: #ff004c; color: #ffffff; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Banir</button>
+                <div style="width: 100%; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                    ${actionHtml}
+                    <button onclick="banUser('${user.username}')" style="background: #000; color: #fff; border: 1px solid #ff004c; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-top: 10px;">Banir Usuário</button>
                 </div>
             `;
             adminList.appendChild(teamElement);
         });
     }
 
-    function changeTeamSeries(username, newSeries) {
-        if (newSeries === 'Nenhuma') {
-            usuariosCadastrados[username].series = null;
-        } else {
-            usuariosCadastrados[username].series = newSeries;
-            // Garante que o objeto stats exista na nova estrutura
-            if (!usuariosCadastrados[username].stats || usuariosCadastrados[username].stats.GolsPro === undefined) {
-                 usuariosCadastrados[username].stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
-            }
-        }
-        saveUsers();
-        alert(`Time ${usuariosCadastrados[username].teamName} alocado para ${newSeries}.`);
-        renderAdminTeamList(); 
-        renderClassificationTables(); // Atualiza a tabela imediatamente
-    }
-
-    function openTeamEditor(username) {
-        const team = usuariosCadastrados[username];
-        if (!team || team.isAdmin) return alert('Time não encontrado ou é o administrador.');
-
-        const newName = prompt(`Editar nome do time "${team.teamName}". Novo nome:`, team.teamName);
-        if (newName === null || newName.trim() === '') return;
-
-        const newLogo = prompt(`Editar URL do Logo de "${team.teamName}". Nova URL:`, team.logo);
-        if (newLogo === null) return;
-        
-        finalizeTeamEdit(username, newName, newLogo);
-    }
-
-    function finalizeTeamEdit(username, newName, newLogo) {
-        const team = usuariosCadastrados[username];
-        
-        // 1. Atualizar posts
-        posts.forEach(post => {
-            if (post.author === team.teamName) {
-                post.author = newName;
-            }
-        });
-
-        // 2. Criar novo objeto de usuário e excluir o antigo
-        const newUsername = newName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
-            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
-            return map[match] || match;
-        });
-        
-        if (newUsername !== username) {
-            delete usuariosCadastrados[username]; 
-            usuariosCadastrados[newUsername] = { ...team, teamName: newName, logo: newLogo };
-        } else {
-            usuariosCadastrados[username].teamName = newName;
-            usuariosCadastrados[username].logo = newLogo;
-        }
-        
-        saveUsers();
-        savePosts();
-        renderAdminTeamList();
-        renderClassificationTables();
-        renderFeed();
-        alert(`Time ${newName} atualizado com sucesso!`);
-    }
-
-    function banTeam(username) {
+    function banUser(username) {
         if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
 
-        const teamName = usuariosCadastrados[username].teamName;
-        if (confirm(`Tem certeza que deseja BANIR o time ${teamName}? Isso é irreversível. Todos os posts serão excluídos.`)) {
+        const userName = usuariosCadastrados[username].userName;
+        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName}? Isso é irreversível. Todos os posts serão excluídos.`)) {
             
-            // Remove posts do time
-            posts = posts.filter(post => post.author !== teamName);
+            const teamName = usuariosCadastrados[username].teamName;
+
+            // Remove posts do usuário
+            posts = posts.filter(post => post.author !== userName && post.author !== teamName);
             
             // Remove o usuário
             delete usuariosCadastrados[username];
@@ -803,12 +786,121 @@
             saveUsers();
             savePosts();
             renderAdminTeamList();
-            renderClassificationTables();
+            renderTeamsList();
             renderFeed();
-            alert(`Time ${teamName} e seus posts foram permanentemente removidos.`);
+            alert(`Usuário ${userName} e seus posts foram permanentemente removidos.`);
         }
     }
 
+    function linkTeam(username) {
+        const selectElement = document.getElementById(`select-team-${username}`);
+        const teamName = selectElement.value;
+        
+        if (!teamName) {
+            return alert('Selecione um time para vincular.');
+        }
+
+        const teamDetails = teamData[teamName]; 
+        const user = usuariosCadastrados[username];
+
+        if (Object.values(usuariosCadastrados).some(u => u.teamName === teamName)) {
+            return alert(`O time ${teamName} já está vinculado a outro usuário.`);
+        }
+
+        // Vincula
+        user.teamName = teamName;
+        user.series = teamDetails.series;
+        user.logo = teamDetails.logo;
+        
+        // Zera stats ao vincular (novo começo para o time)
+        user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+
+        saveUsers();
+        renderAdminTeamList();
+        renderClassificationTables();
+        renderTeamsList();
+        alert(`✅ Time ${teamName} vinculado ao usuário ${user.userName}.`);
+    }
+
+    function unlinkTeam(username) {
+        if (!confirm('Tem certeza que deseja desvincular o time deste usuário? O time ficará disponível para ser vinculado novamente.')) {
+            return;
+        }
+        const user = usuariosCadastrados[username];
+        
+        // Desvincula
+        user.teamName = null;
+        user.series = null;
+        user.logo = null;
+        user.stats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+        
+        saveUsers();
+        renderAdminTeamList();
+        renderClassificationTables();
+        renderTeamsList();
+        alert(`Time desvinculado de ${user.userName}.`);
+    }
+
+    function openTeamEditor(username) {
+        const user = usuariosCadastrados[username];
+        if (!user || user.isAdmin) return alert('Usuário não encontrado ou é o administrador.');
+
+        // Edição do Nome do Usuário
+        const newUserName = prompt(`Editar nome de exibição do usuário "${user.userName}". Novo nome:`, user.userName);
+        if (newUserName === null || newUserName.trim() === '') return;
+
+        // Edição do Logo/Pic (Se tiver time, edita o logo do time; se não, a profile pic)
+        let currentPic = user.teamName ? user.logo : user.profilePic;
+        let typeToEdit = user.teamName ? 'Logo do Time' : 'Foto de Perfil';
+        const newPicUrl = prompt(`Editar URL da ${typeToEdit} de "${user.userName}". Nova URL:`, currentPic);
+        if (newPicUrl === null) return;
+        
+        finalizeUserEdit(username, newUserName, newPicUrl);
+    }
+
+    function finalizeUserEdit(username, newUserName, newPicUrl) {
+        const user = usuariosCadastrados[username];
+        const oldUserName = user.userName;
+
+        // 1. Atualizar posts
+        posts.forEach(post => {
+            if (post.author === oldUserName || post.author === user.teamName) {
+                post.author = newUserName; // Atualiza o nome do autor do post
+                post.authorPic = newPicUrl; // Atualiza a foto do autor (seja logo ou profile pic)
+            }
+        });
+
+        // 2. Atualizar o nome e a imagem
+        user.userName = newUserName;
+        if (user.teamName) {
+            user.logo = newPicUrl;
+        } else {
+            user.profilePic = newPicUrl;
+        }
+        
+        // 3. Atualizar chave de usuário se o nome de usuário for usado como chave
+        const newUsernameKey = newUserName.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
+            const map = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
+            return map[match] || match;
+        });
+
+        if (newUsernameKey !== username) {
+            delete usuariosCadastrados[username]; 
+            usuariosCadastrados[newUsernameKey] = user;
+            if (loggedInUser === username) {
+                loggedInUser = newUsernameKey;
+                localStorage.setItem('loggedInUser', loggedInUser);
+            }
+        }
+
+        saveUsers();
+        savePosts();
+        renderAdminTeamList();
+        renderTeamsList();
+        renderFeed();
+        updateHeaderButtons(loggedInUser);
+        alert(`Usuário ${newUserName} atualizado com sucesso!`);
+    }
 
     function populateTeamSelects(seriesFilter = null) {
         const time1Select = document.getElementById('jogo-time1');
@@ -817,11 +909,13 @@
         time1Select.innerHTML = '<option value="">-- Selecione --</option>';
         time2Select.innerHTML = '<option value="">-- Selecione --</option>';
 
+        // Pega apenas times que estão vinculados E na série correta
         const teams = getAllTeams().filter(team => team.series === seriesFilter);
 
         teams.forEach(team => {
             const option1 = document.createElement('option');
-            option1.value = team.username;
+            // Usamos o username como valor, pois é a chave do objeto que armazena as stats
+            option1.value = team.username; 
             option1.textContent = team.teamName;
             time1Select.appendChild(option1);
 
@@ -895,10 +989,11 @@
 
         // Aplica Pontos e Saldo
         usuariosCadastrados[user1].stats.Pontos += pontos1;
-        usuariosCadastrados[user1].stats.Saldo += (gols1 - gols2);
+        usuariosCadastrados[user1].stats.Saldo = usuariosCadastrados[user1].stats.GolsPro - usuariosCadastrados[user1].stats.GolsContra;
 
         usuariosCadastrados[user2].stats.Pontos += pontos2;
-        usuariosCadastrados[user2].stats.Saldo += (gols2 - gols1);
+        usuariosCadastrados[user2].stats.Saldo = usuariosCadastrados[user2].stats.GolsPro - usuariosCadastrados[user2].stats.GolsContra;
+
 
         saveUsers();
         renderClassificationTables();
@@ -913,11 +1008,12 @@
         const perfilModal = document.getElementById('perfil-time');
         const team = usuariosCadastrados[username];
 
-        if (!perfilModal || !team) { alert(`Dados do time ${username} não encontrados.`); return; }
+        if (!perfilModal || !team || !team.teamName) { alert(`Dados do time não encontrados ou o usuário não está vinculado a um time.`); return; }
 
         document.getElementById('perfil-time-nome').textContent = team.teamName;
         document.getElementById('perfil-time-logo').src = team.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=LOGO';
         document.getElementById('perfil-time-serie').textContent = team.series ? `Série: ${team.series}` : 'Série: Aguardando Alocação';
+        document.getElementById('perfil-time-user-name').textContent = `Gerenciado por: ${team.userName}`;
 
         const stats = team.stats || { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
 
