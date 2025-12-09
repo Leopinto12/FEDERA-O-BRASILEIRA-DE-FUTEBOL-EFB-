@@ -162,6 +162,7 @@
         <h2 id="perfil-time-nome" style="margin-top:15px; font-size:2rem; color:white; text-shadow:0 0 10px #000;"></h2>
         <p id="perfil-time-serie" style="color:#f2c94c; font-weight: bold;"></p>
         <p id="perfil-time-user-name" style="color:#00ff96; font-size: 0.9em;"></p>
+        <button onclick="closePerfilTime()" class="close-btn" style="position: absolute; top: 15px; right: 25px; font-size: 30px;">X</button>
     </div>
 
     <div class="modal-content">
@@ -261,17 +262,16 @@
     </div>
 </div>
 
-<script>
-    // ** NOVAS IMPORTAÇÕES DO FIREBASE **
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
+<script>
     // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE **
     // 🚨 ATUALIZE AS CHAVES ABAIXO COM SEUS DADOS REAIS DO CONSOLE FIREBASE
     const firebaseConfig = {
-        apiKey: "SUA_CHAVE_API_AQUI", 
-        authDomain: "SEU_DOMINIO.firebaseapp.com",
-        projectId: "SEU_PROJECT_ID", 
+        apiKey: "SUA_CHAVE_API_AQUI", // ⚠️ CHAVE OBRIGATÓRIA
+        authDomain: "SEU_DOMINIO.firebaseapp.com", // ⚠️ DOMÍNIO OBRIGATÓRIO
+        projectId: "SEU_PROJECT_ID", // ⚠️ ID DO PROJETO OBRIGATÓRIO
         storageBucket: "SEU_BUCKET.appspot.com", 
         messagingSenderId: "SEU_ID", 
         appId: "SEU_APP_ID"
@@ -336,23 +336,19 @@
         'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
     };
 
-    // Função que constrói os dados iniciais dos times (COMPLETA)
-    function initializeTeamData() {
-        // Esta função cria o admin se ele não for encontrado no Firebase
-        return {
-            'robbenanthony': { 
-                email: 'robbenanthony12@gmail.com', 
-                senha: 'Leoup1234', 
-                isAdmin: true, 
-                userName: 'Robben Anthony',
-                teamName: 'Administrador', 
-                series: null, 
-                logo: 'https://i.imgur.com/uG7b3K8.png', 
-                profilePic: 'https://i.imgur.com/uG7b3K8.png', 
-                stats: defaultStats 
-            }
-        };
-    }
+    // Usuário administrador padrão (usado apenas se não for encontrado no Firebase)
+    const adminUserKey = 'robbenanthony';
+    const initialAdminData = { 
+        email: 'robbenanthony12@gmail.com', 
+        senha: 'Leoup1234', 
+        isAdmin: true, 
+        userName: 'Robben Anthony',
+        teamName: 'Administrador', 
+        series: null, 
+        logo: 'https://i.imgur.com/uG7b3K8.png', 
+        profilePic: 'https://i.imgur.com/uG7b3K8.png', 
+        stats: defaultStats 
+    };
 
     // --- Funções de Sincronização e Ajuda (FIREBASE) ---
     
@@ -362,10 +358,9 @@
             // Certifica-se que o objeto tem as chaves stats
             userData.stats = { ...defaultStats, ...userData.stats }; 
             await db.collection("users").doc(userKey).set(userData);
-            console.log("Usuário salvo no Firebase:", userKey);
         } catch (e) {
             console.error("Erro ao salvar usuário: ", e);
-            alert("Erro ao salvar dados do usuário no Firebase.");
+            alert("Erro ao salvar dados do usuário no Firebase. Verifique sua configuração.");
         }
     }
     
@@ -375,36 +370,41 @@
             // 1. Carregar Usuários
             const userSnapshot = await db.collection("users").get();
             usuariosCadastrados = {};
+            let adminFound = false;
+            
             userSnapshot.forEach(doc => {
                 const userData = doc.data();
                 // 🚨 CORREÇÃO DE BUG: Garante que o stats tenha todos os campos para evitar NaN
                 userData.stats = { ...defaultStats, ...userData.stats }; 
                 usuariosCadastrados[doc.id] = userData;
+                if (doc.id === adminUserKey) {
+                    adminFound = true;
+                }
             });
 
-            // 2. Carregar Posts (ordenado do mais novo para o mais antigo)
+            // 2. Cria o administrador se ele não existir no banco
+            if (!adminFound) {
+                await saveUsersToFirebase(adminUserKey, initialAdminData);
+                usuariosCadastrados[adminUserKey] = initialAdminData;
+            }
+
+
+            // 3. Carregar Posts (ordenado do mais novo para o mais antigo)
             const postSnapshot = await db.collection("posts").orderBy("timestamp", "desc").get(); 
             posts = [];
             postSnapshot.forEach(doc => {
                 posts.push({ id: doc.id, ...doc.data() });
             });
             
-            // 3. Verifica se o administrador inicial existe. Se não, cria e salva no Firebase.
-            if (!usuariosCadastrados['robbenanthony']) {
-                const initialUsers = initializeTeamData();
-                const adminData = initialUsers['robbenanthony'];
-                await saveUsersToFirebase('robbenanthony', adminData);
-                usuariosCadastrados['robbenanthony'] = adminData;
-            }
-            
             console.log(`Dados carregados: ${Object.keys(usuariosCadastrados).length} usuários, ${posts.length} posts.`);
 
         } catch (e) {
-            console.error("Erro ao carregar dados do Firebase. Verifique a conexão ou as Regras de Segurança (Firestore).", e);
-            // Em caso de erro de conexão, tentamos usar o admin local para que o usuário possa logar
-            if (Object.keys(usuariosCadastrados).length === 0) {
-                 usuariosCadastrados = initializeTeamData();
-                 console.log("Falha no Firebase, carregando apenas o administrador localmente.");
+            console.error("Erro ao carregar dados do Firebase. Verifique a conexão, as chaves ou as Regras de Segurança (Firestore).", e);
+            alert("Falha ao carregar dados do Firebase. Verifique o console (F12) para detalhes.");
+            
+            // Se falhou ao carregar, garante que o admin está no cache local para o login inicial funcionar.
+            if (!usuariosCadastrados[adminUserKey]) {
+                 usuariosCadastrados[adminUserKey] = initialAdminData;
             }
         }
     }
@@ -454,7 +454,7 @@
         const postForm = document.getElementById('post-form-container');
 
         if (user) {
-            if (usuariosCadastrados[user].isAdmin) {
+            if (usuariosCadastrados[user] && usuariosCadastrados[user].isAdmin) { // Checa se o usuário existe antes de isAdmin
                 adminBtn.style.display = 'inline-block';
                 
                 loginBtn.textContent = `PAINEL ADMIN (${usuariosCadastrados[user].userName})`;
@@ -466,7 +466,7 @@
                 adminBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'inline-block';
 
-            } else {
+            } else if (usuariosCadastrados[user]) {
                 loginBtn.textContent = `LOGOUT (${usuariosCadastrados[user].userName || usuariosCadastrados[user].teamName})`;
                 loginBtn.onclick = fazerLogout;
                 loginBtn.style.background = '#f2c94c';
@@ -489,10 +489,10 @@
         const pass = document.getElementById('login-pass').value.trim();
 
         const userFound = Object.keys(usuariosCadastrados).find(key => 
-            key === user || usuariosCadastrados[key].email === user
+            key === user || (usuariosCadastrados[key] && usuariosCadastrados[key].email === user)
         );
 
-        if (userFound && usuariosCadastrados[userFound].senha === pass) {
+        if (userFound && usuariosCadastrados[userFound] && usuariosCadastrados[userFound].senha === pass) {
             loggedInUser = userFound;
             // Salva apenas a sessão no localStorage
             localStorage.setItem('loggedInUser', loggedInUser); 
@@ -552,7 +552,7 @@
         // Atualiza o cache local
         usuariosCadastrados[usernameKey] = newUser;
         
-        alert(`🎉 Usuário "${user}" cadastrado com sucesso!`);
+        alert(`🎉 Usuário "${user}" cadastrado com sucesso! Agora o administrador pode vincular um time a você.`);
         closeRegister();
         openLogin();
     }
@@ -577,8 +577,8 @@
         
         const currentUser = usuariosCadastrados[loggedInUser];
         
-        if (!currentUser.isAdmin && !currentUser.teamName) {
-             alert('🚨 Sua conta precisa ser vinculada a um time pelo Administrador para publicar.');
+        if (!currentUser || (!currentUser.isAdmin && !currentUser.teamName)) {
+             alert('🚨 Sua conta precisa ser vinculada a um time pelo Administrador para publicar no feed, ou você deve ser o Administrador.');
              return;
         }
 
@@ -692,8 +692,9 @@
         return b.stats.GolsPro - a.stats.GolsPro; 
     }
     
+    // Função para pegar APENAS os times vinculados (exclui o administrador e usuários não vinculados)
     function getAllTeams() {
-        return Object.values(usuariosCadastrados).filter(user => user.teamName !== 'Administrador');
+        return Object.values(usuariosCadastrados).filter(user => user.teamName && !user.isAdmin);
     }
 
     function renderClassificationTables() {
@@ -733,14 +734,15 @@
                 `;
                 teamCell.style.textAlign = 'left';
 
-                row.insertCell().textContent = stats.Pontos;
-                row.insertCell().textContent = stats.Jogos;
-                row.insertCell().textContent = stats.Vitórias;
-                row.insertCell().textContent = stats.Empates;
-                row.insertCell().textContent = stats.Derrotas;
-                row.insertCell().textContent = stats.GolsPro;
-                row.insertCell().textContent = stats.GolsContra;
-                row.insertCell().textContent = stats.Saldo;
+                // CORREÇÃO: Usamos || 0 para garantir que não apareça NaN ou undefined, embora o loadData garanta isso.
+                row.insertCell().textContent = stats.Pontos || 0;
+                row.insertCell().textContent = stats.Jogos || 0;
+                row.insertCell().textContent = stats.Vitórias || 0;
+                row.insertCell().textContent = stats.Empates || 0;
+                row.insertCell().textContent = stats.Derrotas || 0;
+                row.insertCell().textContent = stats.GolsPro || 0;
+                row.insertCell().textContent = stats.GolsContra || 0;
+                row.insertCell().textContent = stats.Saldo || 0;
             });
         };
 
@@ -753,17 +755,19 @@
     function getAllAvailableTeams() {
         const allUsers = Object.values(usuariosCadastrados);
         const assignedTeamNames = allUsers
-            .filter(user => user.teamName && user.teamName !== 'Administrador')
+            .filter(user => user.teamName) // Filtra todos os usuários que têm um time atribuído (inclui admin, mas teamName é 'Administrador' - que não está na teamData)
             .map(user => user.teamName);
             
         const allBRTeams = Object.keys(teamData); 
         
+        // Retorna todos os times brasileiros que AINDA NÃO estão atribuídos a ninguém.
         return allBRTeams.filter(teamName => !assignedTeamNames.includes(teamName));
     }
 
     function renderTeamsList() {
         const teamsList = document.getElementById('times-list');
         teamsList.innerHTML = '';
+        // Pega APENAS os usuários que têm time vinculado para a lista pública
         const teams = getAllTeams().sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
 
         if (teams.length === 0) {
@@ -795,6 +799,7 @@
     function renderAdminTeamList() {
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
+        // Pega TODOS os usuários, exceto o administrador principal
         const users = Object.keys(usuariosCadastrados)
             .filter(u => !usuariosCadastrados[u].isAdmin)
             .map(u => ({ username: u, ...usuariosCadastrados[u] }))
@@ -1019,6 +1024,7 @@
         time1Select.innerHTML = '<option value="">-- Selecione --</option>';
         time2Select.innerHTML = '<option value="">-- Selecione --</option>';
 
+        // Pega APENAS times que estão vinculados a usuários e que pertencem à Série filtrada
         const teams = getAllTeams().filter(team => team.series === seriesFilter);
 
         teams.forEach(team => {
@@ -1129,14 +1135,14 @@
 
         let statsHtml = `
             <table style="width:100%; text-align:left; background:none;">
-                <tr><td style="width:50%; padding: 5px 0;">Pontos (P):</td><td style="padding: 5px 0;"><b>${stats.Pontos}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Jogos (J):</td><td style="padding: 5px 0;"><b>${stats.Jogos}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Vitórias (V):</td><td style="padding: 5px 0;"><b>${stats.Vitórias}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Empates (E):</td><td style="padding: 5px 0;"><b>${stats.Empates}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Derrotas (D):</td><td style="padding: 5px 0;"><b>${stats.Derrotas}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Gols Pró (GP):</td><td style="padding: 5px 0;"><b>${stats.GolsPro}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Gols Contra (GC):</td><td style="padding: 5px 0;"><b>${stats.GolsContra}</b></td></tr>
-                <tr><td style="width:50%; padding: 5px 0;">Saldo de Gols (SG):</td><td style="padding: 5px 0;"><b>${stats.Saldo}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Pontos (P):</td><td style="padding: 5px 0;"><b>${stats.Pontos || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Jogos (J):</td><td style="padding: 5px 0;"><b>${stats.Jogos || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Vitórias (V):</td><td style="padding: 5px 0;"><b>${stats.Vitórias || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Empates (E):</td><td style="padding: 5px 0;"><b>${stats.Empates || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Derrotas (D):</td><td style="padding: 5px 0;"><b>${stats.Derrotas || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Gols Pró (GP):</td><td style="padding: 5px 0;"><b>${stats.GolsPro || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Gols Contra (GC):</td><td style="padding: 5px 0;"><b>${stats.GolsContra || 0}</b></td></tr>
+                <tr><td style="width:50%; padding: 5px 0;">Saldo de Gols (SG):</td><td style="padding: 5px 0;"><b>${stats.Saldo || 0}</b></td></tr>
             </table>
         `;
         document.getElementById('perfil-time-stats').innerHTML = statsHtml;
