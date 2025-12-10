@@ -92,11 +92,19 @@
         .serie-b tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); } 
         
         /* 6. Feed e Posts */
-        .post { background: #0a1324; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 15px; }
+        .post { background: #0a1324; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 15px; position: relative; }
         .post-header { display: flex; align-items: center; margin-bottom: 10px; }
         .post-author { font-weight: bold; color: #00ff96; margin-right: 10px; }
         .post-date { font-size: 0.8em; color: #999; }
-        .post-content { color: #ccc; }
+        
+        /* CORREÇÃO APLICADA: Evitar que o conteúdo fuja da margem */
+        .post-content { 
+            color: #ccc; 
+            word-wrap: break-word; /* Garante que palavras muito longas sejam quebradas */
+            overflow-wrap: break-word; /* Versão moderna do word-wrap */
+            max-width: 100%; /* Garante que ocupe no máximo o container */
+        }
+        
         #post-form-container textarea { 
             width: 96%; 
             padding: 10px; 
@@ -106,6 +114,24 @@
             color: white; 
             resize: vertical; 
             min-height: 80px; 
+        }
+        .delete-post-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff004c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+        .delete-post-btn:hover {
+            background: #f2c94c;
         }
         
         /* 7. Modais (Login/Cadastro/Admin) */
@@ -336,7 +362,7 @@
 <script>
     // ** CONFIGURAÇÃO DO FIREBASE **
     const firebaseConfig = {
-        // MANTENDO A CONFIGURAÇÃO QUE VOCÊ ESTAVA USANDO
+        // ATENÇÃO: COLOQUE SUA CONFIGURAÇÃO AQUI!
         apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s",
         authDomain: "super-liga-brasileira.firebaseapp.com",
         projectId: "super-liga-brasileira",
@@ -436,7 +462,6 @@
 
     function setupFirestoreListeners() {
         // 1. Ouvir mudanças na coleção 'users'
-        // ESSA FUNÇÃO FOI RESTAURADA PARA O MODELO QUE FUNCIONA PARA CARREGAR OS DADOS
         usersCollection.onSnapshot(snapshot => {
             allUsersCache = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
             
@@ -456,6 +481,7 @@
         
         // 2. Ouvir mudanças na coleção 'posts'
         postsCollection.orderBy('timestamp', 'desc').limit(50).onSnapshot(snapshot => {
+            // Guarda o ID do documento junto com os dados (necessário para a exclusão)
             allPostsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderFeed();
         }, err => {
@@ -476,7 +502,6 @@
     // --- Funções Auxiliares de Dados ---
 
     async function fetchUserObject(uid) {
-        // Esta função foi reescrita para ser mais simples e menos propensa a erros de 'dados incompletos'
         try {
             const doc = await usersCollection.doc(uid).get();
             if (doc.exists) {
@@ -492,6 +517,8 @@
                     loggedInUserObject.userName = 'Robben Anthony (ADMIN)';
                     updateHeaderButtons(loggedInUserObject);
                     alert("Bem-vindo, Administrador principal! Seu status foi confirmado.");
+                } else if (loggedInUserObject.isAdmin) {
+                     alert(`✅ Login de Administrador bem-sucedido!`);
                 } else {
                      alert(`✅ Login bem-sucedido! Bem-vindo(a), ${loggedInUserObject.userName || loggedInUserObject.teamName || 'Membro'}.`);
                 }
@@ -700,6 +727,27 @@
         }
     }
 
+    // NOVA FUNÇÃO: Exclusão de Post pelo ADM
+    async function deletePost(postId) {
+        if (!loggedInUserObject || !loggedInUserObject.isAdmin) {
+            alert('Acesso negado. Apenas administradores podem apagar posts.');
+            return;
+        }
+        
+        if (!confirm('Tem certeza que deseja apagar esta postagem? Esta ação é irreversível.')) {
+            return;
+        }
+
+        try {
+            await postsCollection.doc(postId).delete();
+            alert('✅ Postagem apagada com sucesso!');
+        } catch (error) {
+            console.error("Erro ao apagar post:", error);
+            alert("❌ Falha ao apagar post. Verifique as regras de exclusão do Firestore.");
+        }
+    }
+
+
     function renderFeed() {
         const feedContainer = document.getElementById('feed-posts');
         feedContainer.innerHTML = '';
@@ -709,6 +757,9 @@
             return;
         }
 
+        // Verifica se o usuário logado é admin
+        const isAdmin = loggedInUserObject && loggedInUserObject.isAdmin;
+
         allPostsCache.forEach(post => {
             const author = allUsersCache.find(u => u.uid === post.authorId) || { userName: post.authorName || 'Membro Desconhecido' };
             
@@ -717,12 +768,17 @@
                 dateStr = post.timestamp.toDate().toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
             }
             
-            // Verificação de URL para garantir que a imagem não tente carregar algo inválido
             const isValidImageUrl = post.imageUrl && (post.imageUrl.startsWith('http') || post.imageUrl.startsWith('https'));
+            
+            // Botão de DELETE (Aparece somente para o ADM)
+            const deleteButtonHtml = isAdmin 
+                ? `<button class="delete-post-btn" onclick="deletePost('${post.id}')">X</button>` 
+                : '';
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
             postElement.innerHTML = `
+                ${deleteButtonHtml}
                 <div class="post-header">
                     <img src="${author.profilePic || 'https://i.imgur.com/G4fB8hL.png'}" alt="Foto de Perfil" style="width: 35px; height: 35px; border-radius: 50%; margin-right: 10px; object-fit: cover; border: 2px solid ${author.isAdmin ? '#ff004c' : '#00ff96'};">
                     <span class="post-author">${author.userName || author.email} ${author.isAdmin ? '(ADMIN)' : ''}</span>
