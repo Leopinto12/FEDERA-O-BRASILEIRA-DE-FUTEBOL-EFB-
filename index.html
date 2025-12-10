@@ -1,34 +1,640 @@
-// Continuação do arquivo JavaScript (onde você parou na linha 538)
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SUPERLIGA BRASILEIRA - Versão Online</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* [Seção de Estilos CSS] */
+        body { margin: 0; font-family: 'Roboto', sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
+        
+        /* 1. Header e Logo */
+        header { text-align: center; padding: 40px 20px 60px; background: linear-gradient(180deg, #06142e, #050b16); border-bottom: 3px solid #00ff96; }
+        .logo { width: 180px; filter: drop-shadow(0 0 15px #00ff96); } 
+        h1 { margin-top: 15px; font-size: 2.8rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 15px #00ff96; color: #ffffff; }
+        
+        /* 2. Botões Principais */
+        .header-btn { 
+            margin-top: 20px; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: background 0.3s, box-shadow 0.3s;
+            margin-left: 10px;
+        }
+        #header-login-button { 
+            background: #f2c94c; 
+            color: #050b16; 
+            box-shadow: 0 0 10px #f2c94c; 
+        }
+        #admin-panel-button {
+            background: #ff004c; 
+            color: #ffffff; 
+            box-shadow: 0 0 10px #ff004c;
+        }
+        #admin-panel-button:hover, #header-login-button:hover { 
+            filter: brightness(1.2); 
+        }
 
-            // 2. Cria o objeto do usuário no Firestore (CONTINUAÇÃO)
-            const newUserObject = {
-                email: email,
-                isAdmin: false,
-                userName: user,
+        /* 3. Navegação */
+        nav { display: flex; justify-content: center; gap: 40px; padding: 20px; background: #06142e; position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid #00ff96; }
+        nav a { color: #00ff96; text-decoration: none; font-size: 1.2rem; font-weight: bold; transition: 0.3s ease-in-out; padding: 5px 10px; border-radius: 5px; }
+        nav a:hover { color: #f2c94c; text-shadow: 0 0 10px #f2c94c; transform: scale(1.05); background: rgba(242, 201, 76, 0.1); }
+        
+        /* 4. Layout Geral */
+        .container { width: 90%; max-width: 1200px; margin: 30px auto; padding: 0 10px; }
+        .card { 
+            background: rgba(255,255,255,0.08); 
+            border: 1px solid rgba(0,255,150,0.5); 
+            padding: 25px; 
+            border-radius: 16px; 
+            margin-bottom: 35px; 
+            box-shadow: 0 0 15px rgba(0,255,150,0.3); 
+        }
+        .title { 
+            font-size: 2rem; 
+            margin-bottom: 20px; 
+            color: #00ff96; 
+            text-shadow: 0 0 10px #00ff96; 
+            border-bottom: 2px dashed rgba(0,255,150,0.4); 
+            padding-bottom: 10px; 
+        }
+        .action-button { 
+            background: #00ff96; 
+            color: #050b16; 
+            border: none; 
+            border-radius: 8px; 
+            padding: 12px 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: background 0.3s; 
+            box-shadow: 0 0 10px rgba(0,255,150,0.5); 
+            width: 100%; 
+        }
+        .action-button:hover { background: #f2c94c; box-shadow: 0 0 15px #f2c94c; }
+        .link-switch { color:#f2c94c; text-decoration:none; cursor: pointer; font-weight: bold; transition: color 0.2s; }
+
+        /* 5. Tabelas */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 1.05rem; }
+        th, td { padding: 15px 5px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        th { background: rgba(0,255,150,0.25); color: #ffffff; font-size: 0.95rem; text-transform: uppercase; }
+        tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        tr:hover { background: rgba(0,255,150,0.1); cursor: pointer; }
+        .team-link { cursor: pointer; color: #f2c94c; font-weight: bold; text-shadow: 0 0 3px #f2c94c; transition: color 0.2s; }
+        
+        /* Regras de Classificação */
+        .serie-a tbody tr:nth-child(-n+6) { background: rgba(0, 150, 255, 0.2); } 
+        .serie-a tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); font-weight: bold; } 
+        .serie-b tbody tr:nth-child(-n+4) { background: rgba(0, 255, 150, 0.25); font-weight: bold; } 
+        .serie-b tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); } 
+        
+        /* 6. Feed e Posts */
+        .post { background: #0a1324; border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 15px; }
+        .post-header { display: flex; align-items: center; margin-bottom: 10px; }
+        .post-author { font-weight: bold; color: #00ff96; margin-right: 10px; }
+        .post-date { font-size: 0.8em; color: #999; }
+        .post-content { color: #ccc; }
+        #post-form-container textarea { 
+            width: 96%; 
+            padding: 10px; 
+            background: #0a1324; 
+            border: 1px solid #00ff96; 
+            border-radius: 8px; 
+            color: white; 
+            resize: vertical; 
+            min-height: 80px; 
+        }
+        
+        /* 7. Modais (Login/Cadastro/Admin) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; background: rgba(5, 11, 22, 0.95); z-index: 9999; padding-bottom: 60px; backdrop-filter: blur(5px); }
+        .login-box { background:rgba(255,255,255,0.05); border:1px solid #00ff96; width:85%; max-width:420px; margin:auto; padding:35px; border-radius:14px; box-shadow:0 0 25px rgba(0,255,150,0.4); }
+        .login-input { width:90%; padding:15px; background:#0a1324; border:1px solid #00ff96; border-radius:8px; color:white; margin-bottom:20px; font-size: 1rem; }
+        .modal-content { width: 90%; max-width: 900px; margin: 20px auto; }
+        .close-btn { 
+            position: absolute; 
+            top: 15px; 
+            right: 25px; 
+            font-size: 30px; 
+            font-weight: bold; 
+            color: #ff004c; 
+            cursor: pointer;
+            text-decoration: none;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: #ffffff; }
+
+        /* Estilo específico do modal de Perfil do Time */
+        #perfil-time .modal-header {
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(135deg,#00ff96,#06142e);
+            box-shadow: 0 0 30px #00ff96;
+            position: relative;
+            text-align: center;
+            padding-top: 40px;
+            margin-bottom: 0;
+        }
+        #perfil-time .modal-content { margin-top: -50px; } /* Ajusta o conteúdo para cobrir o header */
+        
+    </style>
+</head>
+<body>
+    <header>
+        <img src="https://i.imgur.com/vHq8qH7.png" class="logo" alt="Logo Superliga" /> 
+        <h1>SUPERLIGA BRASILEIRA</h1>
+        
+        <button onclick="openLogin()" id="header-login-button" class="header-btn">
+            ACESSAR CONTA
+        </button>
+        <button onclick="fazerLogout()" id="admin-panel-button" class="header-btn" style="display:none;">
+            LOGOUT
+        </button>
+    </header>
+
+    <nav>
+        <a href="#feed">Feed</a>
+        <a href="#series">Séries A e B</a>
+        <a href="#times">Times Vinculados</a>
+        <a href="#" onclick="openLogin()">Login/Cadastro</a>
+    </nav>
+
+    <div class="container" id="feed">
+        <div class="card">
+            <div class="title">📸 Feed Oficial</div>
+
+            <div id="post-form-container" style="display:none; margin-bottom: 30px; padding: 15px; background: #06142e; border-radius: 10px; border: 1px solid #f2c94c;">
+                <h3 style="color:#f2c94c;">O que está acontecendo na Superliga?</h3>
+                <textarea id="post-input" placeholder="Publique uma notícia, atualização ou mensagem..." maxlength="300"></textarea>
+                
+                <input type="url" id="post-image-url" 
+                        placeholder="URL da Imagem (opcional)" 
+                        class="login-input" 
+                        style="width: 96%; margin-top: 10px;"
+                        oninput="showImagePreview(this.value)" 
+                />
+                
+                <img id="image-preview" src="" alt="Prévia da Imagem" style="display:none; max-width: 96%; height: auto; margin-top: 10px; border-radius: 5px; border: 2px solid #f2c94c;">
+                
+                <button onclick="publishPost()" class="action-button" style="width: auto; padding: 10px 20px; margin-top: 10px;">Publicar</button>
+            </div>
+
+            <div id="feed-posts">
+                </div>
+        </div>
+    </div>
+
+    <div class="container" id="series">
+        <div class="card">
+            <div class="title">🏆 Série A — Classificação</div>
+            <p id="series-a-status">Carregando dados...</p>
+            <table id="tabela-serie-a" class="serie-a" style="display:none;">
+                <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <div class="title">💠 Série B — Classificação</div>
+            <p id="series-b-status">Carregando dados...</p>
+            <table id="tabela-serie-b" class="serie-b" style="display:none;">
+                <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="container" id="times">
+        <div class="card">
+            <div class="title">🛡️ Times Vinculados</div>
+            <div id="times-list">
+                <p>Carregando times...</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div style="text-align: center; padding: 20px; color: #999; border-top: 1px solid rgba(0,255,150,0.2);">
+            SUPERLIGA © 2025 — O Campeonato Futurista do Brasil
+        </div>
+    </footer>
+
+<div id="perfil-time" class="modal">
+    <div class="modal-header">
+        <img id="perfil-time-logo" src="" class="modal-logo" alt="Logo do Time" style="width: 130px; height: 130px; filter: drop-shadow(0 0 10px #000); border-radius: 50%; border: 5px solid #fff; object-fit: cover;"/>
+        <h2 id="perfil-time-nome" style="margin-top:15px; font-size:2rem; color:white; text-shadow:0 0 10px #000;"></h2>
+        <p id="perfil-time-serie" style="color:#f2c94c; font-weight: bold;"></p>
+        <p id="perfil-time-user-name" style="color:#00ff96; font-size: 0.9em;"></p>
+        <button onclick="closePerfilTime()" class="close-btn" style="color:white; right: 15px; top: 5px;">X</button>
+    </div>
+
+    <div class="modal-content">
+        <div class="card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 14px; border: 1px solid #00ff96; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,255,150,0.5);">
+            <h3 class="title" style="color:#00ff96; margin-bottom: 15px; text-shadow: 0 0 8px #00ff96; border-bottom: 1px solid rgba(0,255,150,0.5); padding-bottom: 10px; font-size: 1.5rem;">📊 Estatísticas</h3>
+            <div id="perfil-time-stats">Nenhuma estatística disponível.</div>
+        </div>
+
+        <div class="card" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 14px; border: 1px solid #00ff96; margin-bottom: 25px; box-shadow: 0 0 10px rgba(0,255,150,0.5);">
+            <h3 class="title" style="color:#00ff96; margin-bottom: 15px; text-shadow: 0 0 8px #00ff96; border-bottom: 1px solid rgba(0,255,150,0.5); padding-bottom: 10px; font-size: 1.5rem;">📰 Posts Recentes</h3>
+            <div id="perfil-time-feed">Nenhum post deste time.</div>
+        </div>
+
+        <button onclick="closePerfilTime()" class="action-button">Voltar à Liga</button>
+    </div>
+</div>
+
+<div id="login" class="modal" style="padding-top:120px; text-align:center;">
+    <div class="login-box">
+        <img src="https://i.imgur.com/vHq8qH7.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">ACESSO DE MEMBRO</h2>
+        <input type="email" placeholder="E-mail" id="login-email" class="login-input" />
+        <input type="password" placeholder="Senha" id="login-pass" class="login-input" />
+        <button onclick="fazerLogin()" class="action-button">ENTRAR</button>
+        <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
+            Ainda não tem conta? <a class="link-switch" onclick="openRegister()">Cadastre-se aqui</a>.
+        </p>
+        <button onclick="closeLogin()" class="header-btn" style="background: transparent; border: 1px solid #00ff96; color: #00ff96; width: 100%; margin: 15px 0 0 0;">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<div id="register" class="modal" style="padding-top:120px; text-align:center;">
+    <div class="login-box">
+        <img src="https://i.imgur.com/vHq8qH7.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO MEMBRO</h2>
+        
+        <input type="url" placeholder="URL da Foto de Perfil (Opcional)" id="register-profile-pic" class="login-input" />
+        
+        <input type="text" placeholder="Nome de Usuário (Será seu nome no feed)" id="register-user" class="login-input" />
+        <input type="email" placeholder="E-mail do Membro (Obrigatório)" id="register-email" class="login-input" />
+        <input type="password" placeholder="Senha (Mínimo 6 caracteres)" id="register-pass" class="login-input" />
+        <button onclick="fazerCadastro()" class="action-button">CADASTRAR MEMBRO</button>
+        <p style="font-size:0.9rem; margin-top:20px; color: #ccc;">
+            Já é membro? <a class="link-switch" onclick="openLogin()">Voltar ao Login</a>.
+        </p>
+        <button onclick="closeRegister()" class="header-btn" style="background: transparent; border: 1px solid #00ff96; color: #00ff96; width: 100%; margin: 15px 0 0 0;">
+            Cancelar
+        </button>
+    </div>
+</div>
+
+<div id="admin-panel" class="modal" style="padding-top:60px;">
+    <div class="modal-content">
+        <a href="#" onclick="fecharPainelAdmin()" class="close-btn">X</a> 
+
+        <div class="card" style="margin-bottom: 25px; position: relative;">
+            <h2 class="title" style="border-color: #ff004c;">⚽ REGISTRAR NOVO JOGO</h2>
+            <p style="color: #ccc; margin-bottom: 15px;">Insira o placar da partida para atualizar as classificações.</p>
+
+            <label style="display:block; margin-bottom: 5px; color:#00ff96;">Série da Partida:</label>
+            <select id="jogo-series" class="login-input" style="width:100%;" onchange="filterTeamsBySeries(this.value)">
+                <option value="">-- Selecione a Série --</option>
+                <option value="Série A">Série A</option>
+                <option value="Série B">Série B</option>
+            </select>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                <div style="width: 45%;">
+                    <label style="display:block; margin-bottom: 5px; color:#f2c94c;">Time 1 (Casa):</label>
+                    <select id="jogo-time1" class="login-input" style="width:100%;"></select>
+                    <input type="number" id="jogo-gols1" placeholder="Gols Time 1" class="login-input" min="0" style="width:90%;" />
+                </div>
+
+                <div style="width: 10%; text-align: center; font-size: 1.5rem; color:#ff004c; font-weight: bold;">VS</div>
+
+                <div style="width: 45%;">
+                    <label style="display:block; margin-bottom: 5px; color:#f2c94c;">Time 2 (Visitante):</label>
+                    <select id="jogo-time2" class="login-input" style="width:100%;"></select>
+                    <input type="number" id="jogo-gols2" placeholder="Gols Time 2" class="login-input" min="0" style="width:90%;" />
+                </div>
+            </div>
+
+            <button onclick="registrarResultado()" class="action-button" style="background: #ff004c; margin-top: 20px;">
+                CALCULAR E REGISTRAR
+            </button>
+        </div>
+        
+        <div class="card">
+            <h2 class="title" style="border-color: #ff004c;">👥 GESTÃO E VINCULAÇÃO DE MEMBROS</h2>
+            <p style="color: #ff004c; font-weight: bold;">Vincule usuários aos times das Séries A e B.</p>
+            <div id="admin-teams-list">
+                </div>
+            <button onclick="fecharPainelAdmin()" class="action-button" style="background: #ff004c;">Fechar Painel</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+    // ** CONFIGURAÇÃO DO FIREBASE **
+    const firebaseConfig = {
+        apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s",
+        authDomain: "super-liga-brasileira.firebaseapp.com",
+        projectId: "super-liga-brasileira",
+        storageBucket: "super-liga-brasileira.firebasestorage.app",
+        messagingSenderId: "178822052518",
+        appId: "1:178822052518:web:1cf7c353285bf51f2d1267",
+        measurementId: "G-9G6409TNJG"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Coleções
+    const usersCollection = db.collection('users');
+    const postsCollection = db.collection('posts');
+    const logsCollection = db.collection('logs'); 
+
+    // Variáveis de Cache e Estado
+    let allUsersCache = [];
+    let allPostsCache = [];
+    let loggedInUserUID = null; 
+    let loggedInUserObject = null;
+
+    // Objeto padrão para estatísticas (usado para zerar ou em times sem dados)
+    const defaultStats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
+
+
+    // --- Data dos Times (Mantido com seus logos e séries) ---
+    const teamData = {
+        'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
+        'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
+        'Athletico-PR': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/23/Clube_Athletico-Paranaense_2020.png' },
+        'Bahia': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1d/Esporte_Clube_Bahia.png' },
+        'Botafogo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/2/26/Botafogo_de_Futebol_e_Regatas_logo.svg' },
+        'Corinthians': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Corinthians_logo.png' },
+        'Criciúma': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/1a/Criciúma_Esporte_Clube.png' },
+        'Cruzeiro': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/CruzeiroEsporteClube.png' },
+        'Cuiabá': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d5/Cuiab%C3%A1_Esporte_Clube_-_Escudo.png/50px-Cuiab%C3%A1_Esporte_Clube_-_Escudo.png' },
+        'Flamengo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Flamengo-RJ_%28BRA%29.png' },
+        'Fluminense': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Fluminense_FC_escudo.png' },
+        'Fortaleza': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Fortaleza_Esporte_Clube_novo_logo.png' },
+        'Grêmio': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b3/Gremio_logo.png' },
+        'Internacional': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f1/Escudo_do_Sport_Club_Internacional.svg' },
+        'Juventude': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Juventude_logo.png' },
+        'Palmeiras': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/10/Palmeiras_logo.svg' },
+        'Red Bull Bragantino': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/50/Red_Bull_Bragantino_escudo.png' },
+        'São Paulo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4f/S%C3%A3o_Paulo_Futebol_Clube.png' },
+        'Vasco': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Escudo_do_Club_de_Regatas_Vasco_da_Gama.svg' },
+        'Vitória': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/EC_Vitória_-_Ba.png' },
+        'América-MG': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Am%C3%A9rica_Futebol_Clube_logo.svg' },
+        'Avaí': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/54/Ava%C3%AD_Futebol_Clube.png' },
+        'Botafogo-SP': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/87/Botafogo-SP.png' },
+        'Brusque': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Brusque_FC.png' },
+        'Ceará': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fc/Ceara_SC.png' },
+        'Chapecoense': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/a/a2/Associa%C3%A7%C3%A3o_Chapecoense_de_Futebol.png' },
+        'CRB': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b0/Clube_de_Regatas_Brasil.png' },
+        'Goiás': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Goi%C3%A1s_Esporte_Clube.png' },
+        'Guarani': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/2d/Guarani-SP.png' },
+        'Ituano': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/0/07/Ituano_Futebol_Clube.png' },
+        'Novorizontino': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/1/11/Gr%C3%AAmio_Novorizontino.png' },
+        'Operário-PR': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/8f/Oper%C3%A1rio_Ferrovi%C3%A1rio_Esporte_Clube.png' },
+        'Paysandu': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Escudo_Paysandu.png' },
+        'Ponte Preta': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/7/7b/Aapp_escudo.png' },
+        'Santos': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/b/b1/Santos_FC_logo.png' },
+        'Sport': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/e/eb/Sport_Club_do_Recife.png' },
+        'Vila Nova': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/d/d4/Vila_Nova_Futebol_Clube.png' },
+        'Amazonas': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/d/d4/Amazonas_FC_logo.png/50px-Amazonas_FC_logo.png' },
+        'Mirassol': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/c/c5/Mirassol_Futebol_Clube.png' },
+        'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
+    };
+
+
+    // --- Event Listener de Carregamento Principal ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Observa o estado de autenticação do Firebase
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Usuário logado via Auth, agora busca os dados no Firestore
+                fetchUserObject(user.uid);
+            } else {
+                // Usuário deslogado
+                loggedInUserUID = null;
+                loggedInUserObject = null;
+                updateHeaderButtons(null);
+                renderAllData(); // Limpa/Atualiza a UI para o estado deslogado
+            }
+        });
+        
+        // Listener para carregar dados do Firestore em tempo real
+        setupFirestoreListeners();
+    });
+    
+    // --- Funções de Sincronização e Cache ---
+
+    function setupFirestoreListeners() {
+        // 1. Ouvir mudanças na coleção 'users'
+        usersCollection.onSnapshot(snapshot => {
+            allUsersCache = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+            
+            // Se o usuário logado estava no cache, atualiza o objeto logado
+            if (loggedInUserUID) {
+                 loggedInUserObject = allUsersCache.find(u => u.uid === loggedInUserUID);
+            }
+            
+            renderAllData();
+        }, err => {
+            console.error("Erro ao receber dados dos usuários:", err);
+            // Mensagem de erro que aponta para as regras de segurança
+            document.getElementById('series-a-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
+            document.getElementById('series-b-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
+        });
+        
+        // 2. Ouvir mudanças na coleção 'posts'
+        postsCollection.orderBy('timestamp', 'desc').limit(50).onSnapshot(snapshot => {
+            allPostsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderFeed();
+        }, err => {
+            console.error("Erro ao receber dados dos posts:", err);
+        });
+    }
+    
+    function renderAllData() {
+        renderClassificationTables();
+        renderTeamsList();
+        renderAdminTeamList(); // Atualiza a gestão no painel admin se aberto
+        updateHeaderButtons(loggedInUserObject); // Redraw buttons/display name
+    }
+
+    // --- Funções Auxiliares de Dados ---
+
+    async function fetchUserObject(uid) {
+        try {
+            const doc = await usersCollection.doc(uid).get();
+            if (doc.exists) {
+                loggedInUserUID = uid;
+                loggedInUserObject = { uid: uid, ...doc.data() };
+                updateHeaderButtons(loggedInUserObject);
+                renderAllData(); 
+                
+                // Lógica de Confirmação de ADM (Leo Pinto/Caio)
+                if (loggedInUserObject.email === 'robbenanthony12@gmail.com' && !loggedInUserObject.isAdmin) {
+                    await usersCollection.doc(uid).update({ isAdmin: true, userName: 'Robben Anthony (ADMIN)' });
+                    loggedInUserObject.isAdmin = true;
+                    loggedInUserObject.userName = 'Robben Anthony (ADMIN)';
+                    updateHeaderButtons(loggedInUserObject);
+                    alert("Bem-vindo, Administrador principal! Seu status foi confirmado.");
+                } else {
+                     alert(`✅ Login bem-sucedido! Bem-vindo(a), ${loggedInUserObject.userName || loggedInUserObject.teamName || 'Membro'}.`);
+                }
+            } else {
+                console.warn("Usuário autenticado, mas dados não encontrados no Firestore. UID:", uid);
+                await auth.signOut();
+            }
+        } catch (error) {
+            console.error("Erro ao buscar objeto do usuário:", error);
+            alert("❌ Falha crítica no login. Verifique as Regras de Segurança do Firestore. Detalhes: " + error.message);
+        }
+    }
+
+
+    // --- Funções de Modais e Navegação ---
+    function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
+    function closeLogin() { document.getElementById('login').style.display = 'none'; document.body.style.overflow = 'auto'; }
+    function openRegister() { document.getElementById('login').style.display = 'none'; document.getElementById('register').style.display = 'block'; document.body.style.overflow = 'hidden'; }
+    function closeRegister() { document.getElementById('register').style.display = 'none'; document.body.style.overflow = 'auto'; }
+    function closePerfilTime() { document.getElementById('perfil-time').style.display = 'none'; document.body.style.overflow = 'auto'; }
+    
+    function fecharPainelAdmin() {
+        document.getElementById('admin-panel').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    function openAdminPanel() {
+        if (!loggedInUserObject || !loggedInUserObject.isAdmin) { alert('Acesso negado.'); return; }
+        renderAdminTeamList();
+        filterTeamsBySeries(''); 
+        document.getElementById('admin-panel').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+
+    // --- Funções de Login e Cadastro (ONLINE) ---
+    function updateHeaderButtons(user) {
+        const loginBtn = document.getElementById('header-login-button');
+        const adminBtn = document.getElementById('admin-panel-button');
+        const postForm = document.getElementById('post-form-container');
+        
+        if (user) {
+            const displayName = user.userName || user.teamName || user.email;
+
+            if (user.isAdmin) {
+                // Se for ADM, o botão principal vira PAINEL e o segundo vira LOGOUT
+                loginBtn.textContent = `PAINEL ADMIN (${displayName})`;
+                loginBtn.onclick = openAdminPanel; 
+                loginBtn.style.background = '#ff004c'; 
+                
+                adminBtn.onclick = fazerLogout;
+                adminBtn.textContent = `LOGOUT`;
+                adminBtn.style.background = '#f2c94c';
+                adminBtn.style.display = 'inline-block';
+            } else {
+                // Se for usuário normal, só tem o botão de LOGOUT
+                loginBtn.textContent = `LOGOUT (${displayName})`;
+                loginBtn.onclick = fazerLogout;
+                loginBtn.style.background = '#f2c94c';
+                adminBtn.style.display = 'none';
+            }
+            
+            postForm.style.display = 'block';
+        } else {
+            // Deslogado
+            loginBtn.textContent = 'ACESSAR CONTA';
+            loginBtn.onclick = openLogin;
+            adminBtn.style.display = 'none';
+            postForm.style.display = 'none';
+            loginBtn.style.background = '#f2c94c';
+        }
+    }
+
+    async function fazerLogin() { 
+        const email = document.getElementById('login-email').value.trim();
+        const pass = document.getElementById('login-pass').value.trim();
+
+        if (!email || !pass) {
+            alert('Preencha o e-mail e a senha.');
+            return;
+        }
+
+        try {
+            await auth.signInWithEmailAndPassword(email, pass);
+            closeLogin();
+        } catch (error) {
+             let message = '❌ Erro desconhecido no Login.';
+            if (error.code === 'auth/user-not-found') {
+                message = '❌ E-mail não cadastrado.';
+            } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                message = '❌ Senha incorreta.';
+            } else if (error.code === 'auth/invalid-email') {
+                message = '❌ E-mail inválido.';
+            } else {
+                message += ` [${error.code}]`;
+            }
+            alert(message);
+        }
+    }
+
+    async function fazerLogout() {
+        try {
+            await auth.signOut();
+            alert('Você foi desconectado(a) com sucesso.');
+        } catch (error) {
+            console.error("Erro ao fazer logout:", error);
+            alert('❌ Falha ao tentar desconectar.');
+        }
+    }
+
+    async function fazerCadastro() { 
+        const profilePicUrl = document.getElementById('register-profile-pic').value.trim(); 
+        const user = document.getElementById('register-user').value.trim(); 
+        const email = document.getElementById('register-email').value.trim();
+        const pass = document.getElementById('register-pass').value.trim();
+
+        if (!user || !email || !pass || pass.length < 6) {
+            alert('🚨 Por favor, preencha o Nome de Usuário, E-mail, e use uma senha de no mínimo 6 caracteres.');
+            return;
+        }
+        
+        try {
+            // 1. Cria o usuário no Firebase Authentication
+            const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+            const uid = userCredential.user.uid;
+
+            // 2. Cria o objeto do usuário no Firestore
+            const newUserObject = {
+                email: email,
+                isAdmin: false,
+                userName: user,
                 profilePic: profilePicUrl || 'https://i.imgur.com/G4fB8hL.png', // Imagem de perfil padrão
                 teamId: null, // Usuário começa sem time vinculado
                 teamName: null,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp() // Timestamp de criação
-            };
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
 
-            // Salva o objeto no Firestore usando o UID como ID do documento
             await usersCollection.doc(uid).set(newUserObject);
 
-            alert('✅ Cadastro realizado com sucesso! Você será logado(a) automaticamente.');
-            closeRegister();
-            // O onAuthStateChanged fará o login e o fetchUserObject será chamado
-        
-        } catch (error) {
-            console.error("Erro no cadastro:", error);
-            let message = '❌ Erro desconhecido no Cadastro.';
-            if (error.code === 'auth/email-already-in-use') {
-                message = '❌ E-mail já cadastrado.';
-            } else if (error.code === 'auth/weak-password') {
-                message = '❌ Senha muito fraca. Use 6 ou mais caracteres.';
-            }
-            alert(message);
-        }
-    }
+            alert('✅ Cadastro realizado com sucesso! Você será logado(a) automaticamente.');
+            closeRegister();
+        } catch (error) {
+            console.error("Erro no cadastro:", error);
+            let message = '❌ Erro desconhecido no Cadastro.';
+            if (error.code === 'auth/email-already-in-use') {
+                message = '❌ E-mail já cadastrado.';
+            } else if (error.code === 'auth/weak-password') {
+                message = '❌ Senha muito fraca. Use 6 ou mais caracteres.';
+            }
+            alert(message);
+        }
+    }
 
     // --- Funções do Feed de Notícias ---
     
@@ -56,7 +662,6 @@
             return;
         }
         
-        // Limita o tamanho do post (maxlength: 300 no HTML)
         if (content.length > 300) {
             alert('A postagem não pode ter mais de 300 caracteres.');
             return;
@@ -91,10 +696,8 @@
         }
 
         allPostsCache.forEach(post => {
-            // Tenta encontrar o objeto completo do autor no cache
             const author = allUsersCache.find(u => u.uid === post.authorId) || { userName: post.authorName || 'Membro Desconhecido' };
             
-            // Formata o timestamp (se existir)
             let dateStr = 'Há pouco tempo';
             if (post.timestamp && post.timestamp.toDate) {
                 dateStr = post.timestamp.toDate().toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -117,33 +720,24 @@
 
     // --- Funções de Classificação (Lógica de Ordenação) ---
 
-    // Função auxiliar para calcular o Saldo de Gols (SG)
     function calculateStats(stats) {
         stats.Saldo = stats.GolsPro - stats.GolsContra;
         return stats;
     }
     
-    // Função de comparação para ordenar a tabela
     function compareTeams(a, b) {
-        // 1. PONTOS (P)
         if (a.Pontos !== b.Pontos) return b.Pontos - a.Pontos;
-        // 2. NÚMERO DE VITÓRIAS (V)
         if (a.Vitórias !== b.Vitórias) return b.Vitórias - a.Vitórias;
-        // 3. SALDO DE GOLS (SG)
         if (a.Saldo !== b.Saldo) return b.Saldo - a.Saldo;
-        // 4. GOLS PRÓ (GP)
         if (a.GolsPro !== b.GolsPro) return b.GolsPro - a.GolsPro;
-        // 5. NOME (Critério de desempate final)
         if (a.Team < b.Team) return -1;
         if (a.Team > b.Team) return 1;
         return 0;
     }
     
     function renderClassificationTables() {
-        // Mapeia o estado atual dos times a partir do cache de usuários
         const teamStats = {};
         
-        // Inicializa o objeto teamStats com todos os times e estatísticas zeradas
         Object.keys(teamData).forEach(teamName => {
             teamStats[teamName] = { 
                 Team: teamName, 
@@ -152,10 +746,8 @@
             };
         });
         
-        // Atualiza as estatísticas com base nos documentos dos usuários
         allUsersCache.forEach(user => {
             if (user.teamName && teamStats[user.teamName] && user.stats) {
-                // Sobrescreve as estatísticas padrão com as do usuário (que são as estatísticas reais)
                 teamStats[user.teamName] = { 
                     Team: user.teamName, 
                     Series: teamData[user.teamName].series,
@@ -164,7 +756,6 @@
             }
         });
         
-        // Separa e ordena as Séries A e B
         const serieA = Object.values(teamStats)
             .filter(t => t.Series === 'Série A')
             .map(calculateStats)
@@ -175,7 +766,7 @@
             .map(calculateStats)
             .sort(compareTeams);
 
-        // --- Renderiza a Tabela da Série A ---
+        // Renderiza a Tabela A
         const tableA = document.getElementById('tabela-serie-a');
         const tbodyA = tableA.querySelector('tbody');
         tbodyA.innerHTML = '';
@@ -197,7 +788,7 @@
         document.getElementById('series-a-status').style.display = 'none';
         tableA.style.display = 'table';
 
-        // --- Renderiza a Tabela da Série B ---
+        // Renderiza a Tabela B
         const tableB = document.getElementById('tabela-serie-b');
         const tbodyB = tableB.querySelector('tbody');
         tbodyB.innerHTML = '';
@@ -226,18 +817,18 @@
         const teamsContainer = document.getElementById('times-list');
         teamsContainer.innerHTML = '';
         
-        const linkedTeams = allUsersCache.filter(u => u.teamName);
+        const linkedUsers = allUsersCache.filter(u => u.teamName);
         const unlinkedTeams = Object.keys(teamData).filter(teamName => 
-            !linkedTeams.some(u => u.teamName === teamName)
+            !linkedUsers.some(u => u.teamName === teamName)
         );
 
         let html = '<h3 style="color:#00ff96; margin-top:0;">Times Vinculados a Usuários</h3>';
-        if (linkedTeams.length > 0) {
-            linkedTeams.forEach(user => {
+        if (linkedUsers.length > 0) {
+            linkedUsers.forEach(user => {
                 const team = teamData[user.teamName];
                 html += `
-                    <div class="card" onclick="openPerfilTime('${user.teamName}')" style="cursor:pointer; display:flex; align-items:center; gap: 15px;">
-                        <img src="${team.logo}" alt="${user.teamName} Logo" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                    <div class="card" onclick="openPerfilTime('${user.teamName}')" style="cursor:pointer; display:flex; align-items:center; gap: 15px; margin-bottom: 10px; padding: 15px;">
+                        <img src="${team.logo}" alt="${user.teamName} Logo" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #f2c94c;">
                         <div>
                             <span style="font-weight: bold; color: #f2c94c; font-size: 1.2rem;">${user.teamName}</span> - <span style="font-size: 0.9em; color: #00ff96;">${team.series}</span>
                             <p style="margin: 5px 0 0 0; color: #ccc;">Gerente: ${user.userName || 'Nome não definido'}</p>
@@ -255,7 +846,7 @@
             unlinkedTeams.forEach(teamName => {
                 const team = teamData[teamName];
                 html += `
-                    <li style="padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+                    <li style="padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center;">
                         <img src="${team.logo}" alt="${teamName} Logo" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
                         <span style="font-weight: bold;">${teamName}</span> - <span style="color:#999;">${team.series}</span>
                     </li>
@@ -293,7 +884,7 @@
             <p><strong>Pontos:</strong> ${teamStats.Pontos}</p>
             <p><strong>Jogos:</strong> ${teamStats.Jogos}</p>
             <p><strong>Vitórias/Empates/Derrotas:</strong> ${teamStats.Vitórias} / ${teamStats.Empates} / ${teamStats.Derrotas}</p>
-            <p><strong>Gols Pró/Contra (Saldo):</strong> ${teamStats.GolsPro} / ${teamStats.GolsContra} (${teamStats.Saldo})</p>
+            <p><strong>Gols Pró/Contra (Saldo):</strong> ${teamStats.GolsPro} / ${teamStats.GolsContra} (${calculateStats(teamStats).Saldo})</p>
         `;
         document.getElementById('perfil-time-stats').innerHTML = statsHtml;
 
@@ -302,7 +893,7 @@
         const feedContainer = document.getElementById('perfil-time-feed');
         feedContainer.innerHTML = '';
         if (teamPosts.length > 0) {
-             teamPosts.slice(0, 3).forEach(post => { // Mostra os 3 mais recentes
+             teamPosts.slice(0, 3).forEach(post => { 
                 let dateStr = post.timestamp && post.timestamp.toDate ? post.timestamp.toDate().toLocaleString('pt-BR', { day: 'numeric', month: 'short' }) : 'data indisponível';
                 feedContainer.innerHTML += `
                     <div style="background: rgba(0,255,150,0.1); padding: 10px; border-radius: 6px; margin-bottom: 8px;">
@@ -322,12 +913,10 @@
 
     // --- Funções de Admin (Painel) ---
     
-    // Função para preencher os <select> de Time 1 e Time 2 no painel admin
     function filterTeamsBySeries(series) {
         const team1Select = document.getElementById('jogo-time1');
         const team2Select = document.getElementById('jogo-time2');
         
-        // Limpa as opções anteriores
         team1Select.innerHTML = '<option value="">-- Selecione o Time --</option>';
         team2Select.innerHTML = '<option value="">-- Selecione o Time --</option>';
 
@@ -342,10 +931,9 @@
         });
     }
 
-    // Renderiza a lista de times para vinculação no painel ADM
     function renderAdminTeamList() {
         const listContainer = document.getElementById('admin-teams-list');
-        if (!listContainer) return; // Garante que só executa se o painel estiver na página
+        if (!listContainer) return; 
 
         listContainer.innerHTML = '';
         
@@ -362,7 +950,7 @@
             linkedUsers.forEach(user => {
                 html += `
                     <tr>
-                        <td style="text-align: left;">${user.userName}</td>
+                        <td style="text-align: left;">${user.userName || user.email}</td>
                         <td>${user.teamName}</td>
                         <td>
                             <button onclick="unlinkTeam('${user.uid}')" style="background:#ff004c; color:white; border:none; padding: 5px 10px; border-radius: 5px; cursor:pointer;">Desvincular</button>
@@ -382,7 +970,7 @@
             html += '<table style="font-size:0.9em;"><thead><tr><th>Time</th><th>Série</th><th>Usuário</th><th>Ação</th></tr></thead><tbody>';
             unlinkedTeams.forEach(teamName => {
                 const userOptions = allUsersCache
-                    .filter(u => !u.teamName) // Apenas usuários SEM time
+                    .filter(u => !u.teamName) 
                     .map(u => `<option value="${u.uid}">${u.userName || u.email}</option>`)
                     .join('');
 
@@ -410,7 +998,6 @@
         listContainer.innerHTML += html;
     }
 
-    // Lógica para vincular um time a um usuário (no Painel ADM)
     async function linkTeamToUser(teamName) {
         const userSelect = document.getElementById(`user-select-${teamName}`);
         const userId = userSelect.value;
@@ -424,27 +1011,23 @@
         if (!confirm(`Tem certeza que deseja vincular o time ${teamName} ao usuário ${userName}?`)) return;
 
         try {
-            // Inicializa as estatísticas zeradas
             const initialStats = {
                 Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0
             };
             
-            // 1. Atualiza o documento do usuário
             await usersCollection.doc(userId).update({
-                teamId: teamName, // Usamos o nome do time como o ID do time
+                teamId: teamName, 
                 teamName: teamName,
                 stats: initialStats
             });
             
             alert(`✅ ${teamName} vinculado a ${userName} com sucesso!`);
-            // Os Listeners do Firestore atualizarão o cache e a UI
         } catch (error) {
             console.error("Erro ao vincular time:", error);
             alert("❌ Erro ao vincular time. Verifique suas regras de segurança.");
         }
     }
 
-    // Lógica para desvincular um time de um usuário (no Painel ADM)
     async function unlinkTeam(userId) {
         const user = allUsersCache.find(u => u.uid === userId);
         if (!user || !user.teamName) return;
@@ -452,7 +1035,6 @@
         if (!confirm(`Tem certeza que deseja desvincular o time ${user.teamName} do usuário ${user.userName}?`)) return;
 
         try {
-            // 1. Remove as chaves de time e estatísticas do documento do usuário
             await usersCollection.doc(userId).update({
                 teamId: firebase.firestore.FieldValue.delete(),
                 teamName: firebase.firestore.FieldValue.delete(),
@@ -460,7 +1042,6 @@
             });
             
             alert(`✅ Time ${user.teamName} desvinculado com sucesso!`);
-            // Os Listeners do Firestore atualizarão o cache e a UI
         } catch (error) {
             console.error("Erro ao desvincular time:", error);
             alert("❌ Erro ao desvincular time. Verifique suas regras de segurança.");
@@ -468,7 +1049,6 @@
     }
 
 
-    // Lógica para registrar um resultado de jogo (no Painel ADM)
     async function registrarResultado() {
         const series = document.getElementById('jogo-series').value;
         const time1 = document.getElementById('jogo-time1').value;
@@ -484,12 +1064,11 @@
         if (!confirm(`Confirmar resultado: ${time1} ${gols1} x ${gols2} ${time2} (${series})?`)) return;
 
         try {
-            // Funções para atualizar as estatísticas de um time no Firestore
             const updateTeamStats = async (teamName, teamGols, oppGols) => {
                 const user = allUsersCache.find(u => u.teamName === teamName);
                 if (!user) {
                     console.warn(`Time ${teamName} não está vinculado a um usuário. Estatísticas ignoradas.`);
-                    return; // Ignora se o time não tem usuário vinculado
+                    return; 
                 }
                 
                 let pontos = 0;
@@ -505,17 +1084,14 @@
                     d = 1;
                 }
 
-                // Obtém a referência ao documento do usuário (que contém as estatísticas do time)
                 const userRef = usersCollection.doc(user.uid);
                 
-                // Atualiza o objeto 'stats' usando transação para garantir atomicidade
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(userRef);
-                    if (!doc.exists) return; // Se o documento for deletado, aborta
+                    if (!doc.exists) return; 
                     
                     const currentStats = doc.data().stats || defaultStats;
 
-                    // Atualiza as estatísticas no objeto
                     const newStats = {
                         Pontos: currentStats.Pontos + pontos,
                         Jogos: currentStats.Jogos + 1,
@@ -524,21 +1100,16 @@
                         Derrotas: currentStats.Derrotas + d,
                         GolsPro: currentStats.GolsPro + teamGols,
                         GolsContra: currentStats.GolsContra + oppGols,
-                        // O Saldo será recalculado no front-end para simplificar o update no Firestore
-                        Saldo: 0 // Será redefinido na função calculateStats
+                        Saldo: 0 // Será redefinido na função calculateStats (frontend)
                     };
 
                     transaction.update(userRef, { stats: newStats });
                 });
             };
 
-            // Atualiza o Time 1
             await updateTeamStats(time1, gols1, gols2);
-            
-            // Atualiza o Time 2
             await updateTeamStats(time2, gols2, gols1);
             
-            // Log do Resultado (Opcional)
             await logsCollection.add({
                 game: `${time1} ${gols1} x ${gols2} ${time2}`,
                 series: series,
