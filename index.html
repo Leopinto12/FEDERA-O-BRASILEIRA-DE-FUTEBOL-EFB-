@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SUPERLIGA BRASILEIRA - Versão Local</title>
+    <title>SUPERLIGA BRASILEIRA - Versão Online</title>
     <style>
         /* [Seção de Estilos CSS] */
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
         header { text-align: center; padding: 40px 20px 60px; background: linear-gradient(180deg, #06142e, #050b16); border-bottom: 3px solid #00ff96; }
-        /* Logo ajustada para o novo link, evitando o erro de imagem_315daa.png */
         .logo { width: 180px; filter: drop-shadow(0 0 15px #00ff96); } 
         h1 { margin-top: 15px; font-size: 2.8rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 15px #00ff96; color: #ffffff; }
         nav { display: flex; justify-content: center; gap: 40px; padding: 20px; background: #06142e; position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid #00ff96; }
@@ -55,7 +54,6 @@
             max-width: 900px;
             margin: 20px auto;
         }
-        /* Estilo do botão de fechar no admin panel */
         .close-btn { 
             position: absolute; 
             top: 15px; 
@@ -73,11 +71,11 @@
         }
         
         /* NOVO CSS: REGRAS DE CLASSIFICAÇÃO (Brasileirão - 20 times) */
-        .serie-a tbody tr:nth-child(-n+6) { background: rgba(0, 150, 255, 0.2); } /* Vagas para Libertadores/Sula */
-        .serie-a tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); font-weight: bold; } /* ZONA DE REBAIXAMENTO (17ª a 20ª) */
+        .serie-a tbody tr:nth-child(-n+6) { background: rgba(0, 150, 255, 0.2); } 
+        .serie-a tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); font-weight: bold; } 
 
-        .serie-b tbody tr:nth-child(-n+4) { background: rgba(0, 255, 150, 0.25); font-weight: bold; } /* ZONA DE PROMOÇÃO (1ª a 4ª) */
-        .serie-b tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); } /* ZONA DE REBAIXAMENTO (17ª a 20ª) */
+        .serie-b tbody tr:nth-child(-n+4) { background: rgba(0, 255, 150, 0.25); font-weight: bold; } 
+        .serie-b tbody tr:nth-child(n+17) { background: rgba(255, 0, 76, 0.25); } 
     </style>
 </head>
 <body>
@@ -127,7 +125,7 @@
     <div class="container" id="series">
         <div class="card">
             <div class="title">🏆 Série A — Classificação</div>
-            <p id="series-a-status">Nenhum time na Série A.</p>
+            <p id="series-a-status">Carregando dados...</p>
             <table id="tabela-serie-a" class="serie-a" style="display:none;">
                 <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
@@ -136,8 +134,8 @@
 
         <div class="card">
             <div class="title">💠 Série B — Classificação</div>
-            <p id="series-b-status">Nenhum time na Série B.</p>
-             <table id="tabela-serie-b" class="serie-b" style="display:none;">
+            <p id="series-b-status">Carregando dados...</p>
+            <table id="tabela-serie-b" class="serie-b" style="display:none;">
                 <thead><tr><th>#</th><th>Time</th><th>P</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead>
                 <tbody></tbody>
             </table>
@@ -148,7 +146,7 @@
         <div class="card">
             <div class="title">🛡️ Times Vinculados</div>
             <div id="times-list">
-                <p>Nenhum time vinculado além do administrador.</p>
+                <p>Carregando times...</p>
             </div>
         </div>
     </div>
@@ -263,14 +261,37 @@
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <script>
-    // ** CONFIGURAÇÃO E DADOS LOCAIS **
-    
-    // Variável de Cache Local
-    let usuariosCadastrados = {}; 
-    let posts = [];
-    let loggedInUser = null; 
-    let passwords = {}; // Armazena senhas localmente (apenas para simulação local)
+    // ** CONFIGURAÇÃO DO FIREBASE **
+    const firebaseConfig = {
+        apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s",
+        authDomain: "super-liga-brasileira.firebaseapp.com",
+        projectId: "super-liga-brasileira",
+        storageBucket: "super-liga-brasileira.firebasestorage.app",
+        messagingSenderId: "178822052518",
+        appId: "1:178822052518:web:1cf7c353285bf51f2d1267",
+        measurementId: "G-9G6409TNJG"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Coleções
+    const usersCollection = db.collection('users');
+    const postsCollection = db.collection('posts');
+    const logsCollection = db.collection('logs'); // Para logs de admin/jogo
+
+    // Variável de Cache
+    let allUsersCache = [];
+    let allPostsCache = [];
+    let loggedInUserUID = null; 
+    let loggedInUserObject = null;
 
     // Objeto padrão para garantir que todos os times tenham essas chaves zeradas
     const defaultStats = { Pontos: 0, Jogos: 0, Vitórias: 0, Empates: 0, Derrotas: 0, GolsPro: 0, GolsContra: 0, Saldo: 0 };
@@ -278,6 +299,7 @@
 
     // --- Data dos Times (Série A e B 2025) ---
     const teamData = {
+        // ... (Mantenha todos os 40 times aqui, como na versão anterior) ...
         'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
         'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
         'Athletico-PR': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/23/Clube_Athletico-Paranaense_2020.png' },
@@ -298,8 +320,6 @@
         'São Paulo': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4f/S%C3%A3o_Paulo_Futebol_Clube.png' },
         'Vasco': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Escudo_do_Club_de_Regatas_Vasco_da_Gama.svg' },
         'Vitória': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/commons/6/6f/EC_Vitória_-_Ba.png' },
-        
-        // --- SÉRIE B ---
         'América-MG': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Am%C3%A9rica_Futebol_Clube_logo.svg' },
         'Avaí': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/5/54/Ava%C3%AD_Futebol_Clube.png' },
         'Botafogo-SP': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/8/87/Botafogo-SP.png' },
@@ -322,92 +342,93 @@
         'Remo': { series: 'Série B', logo: 'https://upload.wikimedia.org/wikipedia/pt/thumb/4/4b/Clube_do_Remo.svg/50px-Clube_do_Remo.svg.png' },
     };
 
-    // Usuário administrador padrão (Para Login Local)
-    const adminUserKey = 'robbenanthony';
-    const initialAdminData = { 
-        email: 'robbenanthony12@gmail.com', 
-        senha: 'Leoup1234', 
-        isAdmin: true, 
-        userName: 'Robben Anthony (ADMIN)',
-        teamName: 'Administrador Superliga', 
-        series: null, 
-        logo: 'https://i.imgur.com/vHq8qH7.png', 
-        profilePic: 'https://i.imgur.com/vHq8qH7.png', 
-        stats: defaultStats,
-        uid: 'admin_local_id' 
-    };
-
-    // --- Funções de Persistência (Local Storage) ---
-
-    // Função para salvar TODOS os dados (usuários e posts) no LocalStorage
-    function saveDataToLocalStorage() {
-        localStorage.setItem('superliga_users', JSON.stringify(usuariosCadastrados));
-        localStorage.setItem('superliga_posts', JSON.stringify(posts));
-        localStorage.setItem('superliga_passwords', JSON.stringify(passwords));
-    }
-
-    // Função para carregar TODOS os dados do LocalStorage
-    function loadDataFromLocalStorage() {
-        try {
-            const storedUsers = localStorage.getItem('superliga_users');
-            const storedPosts = localStorage.getItem('superliga_posts');
-            const storedPasswords = localStorage.getItem('superliga_passwords');
-            
-            // 1. Carregar Usuários
-            if (storedUsers) {
-                usuariosCadastrados = JSON.parse(storedUsers);
-            } else {
-                usuariosCadastrados = {};
-            }
-            
-            // 2. Carregar Posts
-            if (storedPosts) {
-                // Ordena os posts, pois o local storage não faz isso automaticamente
-                posts = JSON.parse(storedPosts).sort((a, b) => b.timestamp - a.timestamp);
-            } else {
-                posts = [];
-            }
-            
-            // 3. Carregar Senhas (para login)
-            if (storedPasswords) {
-                passwords = JSON.parse(storedPasswords);
-            } else {
-                passwords = {};
-            }
-
-            // 4. Garantir que o Admin exista
-            setupAdminUserLocal();
-
-        } catch (e) {
-            console.error("Erro ao carregar dados do Local Storage:", e);
-            // Fallback: garante que o admin está lá se o LS falhar
-            setupAdminUserLocal();
-        }
-    }
-
-    // Função que verifica e cria o administrador no Local Storage
-    function setupAdminUserLocal() {
-        if (!usuariosCadastrados[adminUserKey]) {
-            usuariosCadastrados[adminUserKey] = initialAdminData;
-            passwords[initialAdminData.email] = initialAdminData.senha;
-            saveDataToLocalStorage();
-        }
-    }
-
 
     // --- Event Listener de Carregamento Principal ---
     document.addEventListener('DOMContentLoaded', () => {
+        // Observa o estado de autenticação do Firebase
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Usuário logado via Auth, agora busca os dados no Firestore
+                fetchUserObject(user.uid);
+            } else {
+                // Usuário deslogado
+                loggedInUserUID = null;
+                loggedInUserObject = null;
+                updateHeaderButtons(null);
+            }
+        });
         
-        loadDataFromLocalStorage(); 
+        // Listener para carregar dados do Firestore em tempo real
+        setupFirestoreListeners();
+    });
+    
+    // --- Funções de Sincronização e Cache ---
 
-        // Tenta recuperar o loggedInUser do localStorage.
-        loggedInUser = localStorage.getItem('loggedInUserLocal');
+    function setupFirestoreListeners() {
+        // 1. Ouvir mudanças na coleção 'users'
+        usersCollection.onSnapshot(snapshot => {
+            allUsersCache = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+            
+            // Se o usuário logado estava no cache, atualiza o objeto logado
+            if (loggedInUserUID) {
+                 loggedInUserObject = allUsersCache.find(u => u.uid === loggedInUserUID);
+            }
+            
+            renderAllData();
+        }, err => {
+            console.error("Erro ao receber dados dos usuários:", err);
+            // Mensagem de erro que aponta para as regras de segurança
+            document.getElementById('series-a-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
+            document.getElementById('series-b-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
+        });
         
-        updateHeaderButtons(loggedInUser); 
-        renderFeed();
+        // 2. Ouvir mudanças na coleção 'posts'
+        postsCollection.orderBy('timestamp', 'desc').limit(50).onSnapshot(snapshot => {
+            allPostsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderFeed();
+        }, err => {
+            console.error("Erro ao receber dados dos posts:", err);
+        });
+    }
+    
+    function renderAllData() {
         renderClassificationTables();
         renderTeamsList();
-    });
+        renderAdminTeamList(); // Atualiza a gestão no painel admin se aberto
+        updateHeaderButtons(loggedInUserObject); // Redraw buttons/display name
+    }
+
+    // --- Funções Auxiliares de Dados ---
+
+    async function fetchUserObject(uid) {
+        try {
+            const doc = await usersCollection.doc(uid).get();
+            if (doc.exists) {
+                loggedInUserUID = uid;
+                loggedInUserObject = { uid: uid, ...doc.data() };
+                updateHeaderButtons(loggedInUserObject);
+                renderAllData(); // Força a renderização após o login
+                // Verifica o admin inicial
+                if (loggedInUserObject.email === 'robbenanthony12@gmail.com' && !loggedInUserObject.isAdmin) {
+                    await usersCollection.doc(uid).update({ isAdmin: true, userName: 'Robben Anthony (ADMIN)' });
+                    loggedInUserObject.isAdmin = true;
+                    loggedInUserObject.userName = 'Robben Anthony (ADMIN)';
+                    updateHeaderButtons(loggedInUserObject);
+                    alert("Bem-vindo, Administrador principal! Seu status foi confirmado.");
+                } else {
+                     alert(`✅ Login bem-sucedido! Bem-vindo(a), ${loggedInUserObject.userName || loggedInUserObject.teamName || 'Membro'}.`);
+                }
+            } else {
+                console.warn("Usuário autenticado, mas dados não encontrados no Firestore. UID:", uid);
+                // Força logout se não encontrar dados, impedindo o erro de 'userName' undefined
+                await auth.signOut();
+            }
+        } catch (error) {
+            console.error("Erro ao buscar objeto do usuário:", error);
+            alert("❌ Falha crítica no login. Verifique as Regras de Segurança do Firestore. Detalhes: " + error.message);
+        }
+    }
+
 
     // --- Funções de Modais e Navegação ---
     function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
@@ -422,7 +443,7 @@
     }
     
     function openAdminPanel() {
-        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) { alert('Acesso negado.'); return; }
+        if (!loggedInUserObject || !loggedInUserObject.isAdmin) { alert('Acesso negado.'); return; }
         renderAdminTeamList();
         filterTeamsBySeries(''); 
         document.getElementById('admin-panel').style.display = 'block';
@@ -430,18 +451,16 @@
     }
 
 
-    // --- Funções de Login e Cadastro (AGORA SÓ LOCAL) ---
-    function updateHeaderButtons(userKey) {
+    // --- Funções de Login e Cadastro (ONLINE) ---
+    function updateHeaderButtons(user) {
         const loginBtn = document.getElementById('header-login-button');
         const adminBtn = document.getElementById('admin-panel-button');
         const postForm = document.getElementById('post-form-container');
-
-        if (userKey && usuariosCadastrados[userKey]) {
-            const user = usuariosCadastrados[userKey];
-            const displayName = user.userName || user.teamName || userKey;
+        
+        if (user) {
+            const displayName = user.userName || user.teamName || user.email;
 
             if (user.isAdmin) {
-                // Admin
                 adminBtn.style.display = 'inline-block';
                 loginBtn.textContent = `PAINEL ADMIN (${displayName})`;
                 loginBtn.onclick = openAdminPanel; 
@@ -451,7 +470,6 @@
                 adminBtn.style.background = '#f2c94c';
                 adminBtn.style.display = 'inline-block';
             } else {
-                // Usuário Comum
                 loginBtn.textContent = `LOGOUT (${displayName})`;
                 loginBtn.onclick = fazerLogout;
                 loginBtn.style.background = '#f2c94c';
@@ -468,11 +486,7 @@
         }
     }
 
-    function findUserByEmail(email) {
-        return Object.keys(usuariosCadastrados).find(key => usuariosCadastrados[key].email === email);
-    }
-
-    function fazerLogin() { 
+    async function fazerLogin() { 
         const email = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
 
@@ -480,44 +494,38 @@
             alert('Preencha o e-mail e a senha.');
             return;
         }
-        
-        const usernameKey = findUserByEmail(email);
 
-        if (!usernameKey) {
-            alert('❌ Usuário não encontrado.');
-            return;
+        try {
+            const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+            // O fetchUserObject será chamado pelo onAuthStateChanged (Listener)
+            closeLogin();
+        } catch (error) {
+             let message = '❌ Erro desconhecido no Login.';
+            if (error.code === 'auth/user-not-found') {
+                message = '❌ E-mail não cadastrado.';
+            } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                message = '❌ Senha incorreta.';
+            } else if (error.code === 'auth/invalid-email') {
+                message = '❌ E-mail inválido.';
+            } else {
+                message += ` [${error.code}]`;
+            }
+            alert(message);
         }
-        
-        // 1. Verifica a senha salva localmente
-        if (passwords[email] !== pass) {
-            alert('❌ Senha incorreta.');
-            return;
-        }
-
-        // 2. Login bem-sucedido
-        loggedInUser = usernameKey; 
-        localStorage.setItem('loggedInUserLocal', loggedInUser); 
-        
-        const userObject = usuariosCadastrados[loggedInUser];
-        const displayName = userObject.userName || userObject.teamName || loggedInUser;
-        
-        closeLogin();
-        updateHeaderButtons(loggedInUser);
-        renderClassificationTables();
-        renderTeamsList();
-        renderFeed(); 
-        alert(`✅ Login local bem-sucedido! Bem-vindo(a), ${displayName}.`);
     }
 
-    function fazerLogout() {
-        loggedInUser = null;
-        localStorage.removeItem('loggedInUserLocal'); 
-        updateHeaderButtons(null);
-        renderFeed();
-        alert('Você foi desconectado(a) com sucesso.');
+    async function fazerLogout() {
+        try {
+            await auth.signOut();
+            // O onAuthStateChanged (Listener) cuidará da atualização da UI
+            alert('Você foi desconectado(a) com sucesso.');
+        } catch (error) {
+            console.error("Erro ao fazer logout:", error);
+            alert('❌ Falha ao tentar desconectar.');
+        }
     }
 
-    function fazerCadastro() { 
+    async function fazerCadastro() { 
         const profilePicUrl = document.getElementById('register-profile-pic').value.trim(); 
         const user = document.getElementById('register-user').value.trim(); 
         const email = document.getElementById('register-email').value.trim();
@@ -528,47 +536,43 @@
             return;
         }
         
-        // Cria a chave única
-        const usernameKey = user.toLowerCase().replace(/\s/g, '').replace(/[áéíóúãõç]/g, match => {
-            const map = { 'á': 'a', 'é': 'e', 'í': 'e', 'ó': 'o', 'ú': 'u', 'ã': 'a', 'õ': 'o', 'ç': 'c' };
-            return map[match] || match;
-        });
-        
-        if (Object.keys(usuariosCadastrados).includes(usernameKey)) {
-            alert('❌ Nome de usuário já cadastrado. Tente adicionar um sobrenome ou número.');
-            return;
+        try {
+            // 1. Cria o usuário no Firebase Authentication
+            const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+            const uid = userCredential.user.uid;
+
+            // 2. Cria o objeto do usuário no Firestore
+            const newUserObject = {
+                email: email,
+                isAdmin: false,
+                userName: user, 
+                profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
+                teamName: null, 
+                series: null, 
+                logo: null, 
+                stats: defaultStats 
+            };
+            
+            await usersCollection.doc(uid).set(newUserObject);
+
+            alert(`🎉 Usuário "${user}" cadastrado com sucesso! Agora o administrador pode vincular um time a você.`);
+            closeRegister();
+            openLogin();
+            
+        } catch (error) {
+            let message = '❌ Erro desconhecido no Cadastro.';
+            if (error.code === 'auth/email-already-in-use') {
+                message = '❌ Este e-mail já está em uso.';
+            } else if (error.code === 'auth/weak-password') {
+                message = '❌ Senha muito fraca. Use 6 ou mais caracteres.';
+            } else {
+                message += ` [${error.code}]`;
+            }
+            alert(message);
         }
-
-        if (findUserByEmail(email)) {
-            alert('❌ Este e-mail já está em uso.');
-            return;
-        }
-
-        // 1. Cria o novo usuário localmente
-        const newUser = {
-            uid: 'local_' + Date.now(), 
-            email: email,
-            isAdmin: false,
-            userName: user, 
-            username: usernameKey, 
-            profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
-            teamName: null, 
-            series: null,
-            logo: null, 
-            stats: defaultStats 
-        };
-
-        // 2. Salva no cache e local storage
-        usuariosCadastrados[usernameKey] = newUser;
-        passwords[email] = pass; // Salva a senha localmente
-        saveDataToLocalStorage();
-        
-        alert(`🎉 Usuário "${user}" cadastrado com sucesso! Agora o administrador pode vincular um time a você.`);
-        closeRegister();
-        openLogin();
     }
 
-    // --- Funções de Feed ---
+    // --- Funções de Feed (ONLINE) ---
     function showImagePreview(url) {
         const imgPreview = document.getElementById('image-preview');
         if (url) {
@@ -580,15 +584,13 @@
         }
     }
 
-    function publishPost() { 
-        if (!loggedInUser) {
+    async function publishPost() { 
+        if (!loggedInUserObject) {
             alert('🚨 Você precisa estar logado para publicar.');
             return;
         }
         
-        const currentUser = usuariosCadastrados[loggedInUser];
-        
-        if (!currentUser || (!currentUser.isAdmin && !currentUser.teamName)) {
+        if (!loggedInUserObject.isAdmin && !loggedInUserObject.teamName) {
              alert('🚨 Sua conta precisa ser vinculada a um time pelo Administrador para publicar no feed, ou você deve ser o Administrador.');
              return;
         }
@@ -601,48 +603,54 @@
             return;
         }
 
-        const authorName = currentUser.teamName || currentUser.userName;
-        const authorImage = currentUser.logo || currentUser.profilePic;
+        const authorName = loggedInUserObject.teamName || loggedInUserObject.userName;
+        const authorImage = loggedInUserObject.logo || loggedInUserObject.profilePic;
 
         const newPost = {
-            id: 'post_' + Date.now(), 
             author: authorName,
             content: postContent,
-            date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
             image: postImage || null,
             authorPic: authorImage,
-            timestamp: Date.now() 
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // Firestore registra o tempo exato do servidor
         };
 
-        // Adiciona ao cache local e salva
-        posts.unshift(newPost); // Adiciona no início
-        posts.sort((a, b) => b.timestamp - a.timestamp); // Re-ordena
-        saveDataToLocalStorage(); 
-        
-        document.getElementById('post-input').value = '';
-        document.getElementById('post-image-url').value = '';
-        document.getElementById('image-preview').style.display = 'none';
-        renderFeed();
-        alert('✅ Post publicado com sucesso!');
+        try {
+            await postsCollection.add(newPost);
+            
+            document.getElementById('post-input').value = '';
+            document.getElementById('post-image-url').value = '';
+            document.getElementById('image-preview').style.display = 'none';
+            // O listener de posts fará o renderFeed() automaticamente
+            alert('✅ Post publicado com sucesso!');
+
+        } catch (error) {
+            console.error("Erro ao publicar post:", error);
+            alert("❌ Falha ao publicar post. Verifique as Regras de Segurança (allow write).");
+        }
     }
 
     // FUNÇÃO DELETAR POST (ADMIN)
-    function deletePost(postId) { 
-        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) {
+    async function deletePost(postId) { 
+        if (!loggedInUserObject || !loggedInUserObject.isAdmin) {
             alert('Acesso negado. Apenas o administrador pode excluir posts.');
             return;
         }
         if (confirm('Tem certeza que deseja excluir esta publicação?')) {
-            posts = posts.filter(post => post.id !== postId);
-            saveDataToLocalStorage();
-            renderFeed();
-            alert('Publicação excluída.');
+            try {
+                await postsCollection.doc(postId).delete();
+                alert('Publicação excluída.');
+            } catch (error) {
+                console.error("Erro ao deletar post:", error);
+                alert('❌ Falha ao deletar post. Verifique as Regras de Segurança.');
+            }
         }
     }
 
     function renderFeed() {
         const feedContainer = document.getElementById('feed-posts');
         feedContainer.innerHTML = '';
+        
+        const posts = allPostsCache;
 
         if (posts.length === 0) {
             feedContainer.innerHTML = '<p style="color:#ccc; text-align:center;">Nenhum post no feed ainda.</p>';
@@ -653,13 +661,15 @@
             let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
             
             let adminDeleteBtn = '';
-            if (loggedInUser && usuariosCadastrados[loggedInUser] && usuariosCadastrados[loggedInUser].isAdmin) {
+            if (loggedInUserObject && loggedInUserObject.isAdmin) {
                 adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost('${post.id}')">Excluir</span>`;
             }
             
             const authorPic = post.authorPic || 'https://via.placeholder.com/30/06142e/00ff96?text=P';
             
-            const dateDisplay = post.timestamp ? new Date(post.timestamp).toLocaleDateString('pt-BR') : post.date;
+            // Formatando o timestamp do Firestore
+            const dateObj = post.timestamp ? post.timestamp.toDate() : new Date();
+            const dateDisplay = dateObj.toLocaleDateString('pt-BR') + ' ' + dateObj.toLocaleTimeString('pt-BR');
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
@@ -679,7 +689,7 @@
         });
     }
 
-    // --- Funções de Classificação, Admin e Gestão (MANTIDAS) ---
+    // --- Funções de Classificação, Admin e Gestão (ADAPTADAS PARA FIREBASE) ---
     function sortTeams(a, b) {
         if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
         if (b.stats.Vitórias !== a.stats.Vitórias) return b.stats.Vitórias - a.stats.Vitórias;
@@ -688,7 +698,7 @@
     }
     
     function getAllTeams() {
-        return Object.values(usuariosCadastrados).filter(user => user.teamName && !user.isAdmin);
+        return allUsersCache.filter(user => user.teamName && !user.isAdmin);
     }
 
     function renderClassificationTables() {
@@ -707,6 +717,7 @@
             if (teams.length === 0) {
                 table.style.display = 'none';
                 status.style.display = 'block';
+                status.textContent = "Nenhum time alocado na Série.";
                 return;
             }
             
@@ -723,7 +734,7 @@
                 teamCell.innerHTML = `
                     <div style="display:flex; align-items:center;">
                         <img src="${team.logo}" alt="Logo" style="width: 25px; height: 25px; margin-right: 8px; border-radius: 50%; object-fit: cover;">
-                        <a onclick="openPerfilTime('${team.username}')" class="team-link">${team.teamName}</a>
+                        <a onclick="openPerfilTime('${team.uid}')" class="team-link">${team.teamName}</a>
                     </div>
                 `;
                 teamCell.style.textAlign = 'left';
@@ -746,8 +757,7 @@
     // --- Funções de Gestão Admin ---
     
     function getAllAvailableTeams() {
-        const allUsers = Object.values(usuariosCadastrados);
-        const assignedTeamNames = allUsers
+        const assignedTeamNames = allUsersCache
             .filter(user => user.teamName) 
             .map(user => user.teamName);
             
@@ -770,7 +780,7 @@
             const teamElement = document.createElement('div');
             teamElement.className = 'card';
             teamElement.style.cssText = 'padding: 15px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #0a1324; cursor: pointer;';
-            teamElement.onclick = () => openPerfilTime(team.username);
+            teamElement.onclick = () => openPerfilTime(team.uid); // Usa UID
 
             teamElement.innerHTML = `
                 <div style="display: flex; align-items: center;">
@@ -788,11 +798,12 @@
     }
 
     function renderAdminTeamList() {
+        if (!document.getElementById('admin-teams-list')) return; // Evita erro se o painel não estiver aberto
+        
         const adminList = document.getElementById('admin-teams-list');
         adminList.innerHTML = '';
-        const users = Object.keys(usuariosCadastrados)
-            .filter(u => !usuariosCadastrados[u].isAdmin)
-            .map(u => ({ username: u, ...usuariosCadastrados[u] }))
+        const users = allUsersCache
+            .filter(u => !u.isAdmin)
             .sort((a, b) => (a.userName || '').localeCompare(b.userName || ''));
         
         const availableTeams = getAllAvailableTeams();
@@ -814,8 +825,8 @@
                 actionHtml = `
                     <p style="margin: 5px 0 0; font-size: 0.9em; color: #00ff96;">Time: <b>${user.teamName} (${currentSeries})</b></p>
                     <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
-                        <button onclick="unlinkTeam('${user.username}')" style="background: #ff004c; color: #ffffff; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Desvincular</button>
-                        <button onclick="openTeamEditor('${user.username}')" style="background: #f2c94c; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Editar Usuário/Time</button>
+                        <button onclick="unlinkTeam('${user.uid}')" style="background: #ff004c; color: #ffffff; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Desvincular</button>
+                        <button onclick="openTeamEditor('${user.uid}')" style="background: #f2c94c; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Editar Usuário/Time</button>
                     </div>
                 `;
             } else {
@@ -823,11 +834,11 @@
                 actionHtml = `
                     <p style="margin: 5px 0 0; font-size: 0.9em; color: #ff004c;">Status: **NÃO VINCULADO**</p>
                     <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center;">
-                        <select id="select-team-${user.username}" style="padding: 5px; border-radius: 5px;">
+                        <select id="select-team-${user.uid}" style="padding: 5px; border-radius: 5px;">
                             <option value="">-- Vincular Time --</option>
                             ${selectOptions}
                         </select>
-                        <button onclick="linkTeam('${user.username}')" style="background: #00ff96; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Vincular</button>
+                        <button onclick="linkTeam('${user.uid}')" style="background: #00ff96; color: #050b16; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Vincular</button>
                     </div>
                 `;
             }
@@ -842,40 +853,46 @@
                 </div>
                 <div style="width: 100%; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
                     ${actionHtml}
-                    <button onclick="banUser('${user.username}', '${user.email}')" style="background: #000; color: #fff; border: 1px solid #ff004c; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-top: 10px;">Banir Usuário</button>
+                    <button onclick="banUser('${user.uid}', '${user.email}')" style="background: #000; color: #fff; border: 1px solid #ff004c; border-radius: 5px; padding: 6px 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-top: 10px;">Banir Usuário</button>
                 </div>
             `;
             adminList.appendChild(teamElement);
         });
     }
 
-    function banUser(username, email) { 
-        if (!loggedInUser || !usuariosCadastrados[loggedInUser].isAdmin) return alert('Acesso negado.');
+    async function banUser(uid, email) { 
+        if (!loggedInUserObject || !loggedInUserObject.isAdmin) return alert('Acesso negado.');
 
-        const userToDelete = usuariosCadastrados[username];
+        const userToDelete = allUsersCache.find(u => u.uid === uid);
         if (!userToDelete) return; 
 
         const userName = userToDelete.userName;
         
-
-        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName} (${email})? Isso removerá todos os dados e posts locais.`)) {
+        if (confirm(`Tem certeza que deseja BANIR o usuário ${userName} (${email})? Isso removerá o perfil do Firestore e o login no Auth.`)) {
             
-            // Remove do cache
-            delete passwords[userToDelete.email];
-            delete usuariosCadastrados[username];
-            posts = posts.filter(post => post.author !== userToDelete.teamName);
-            
-            saveDataToLocalStorage();
-            
-            renderAdminTeamList();
-            renderTeamsList();
-            renderFeed();
-            alert(`Usuário ${userName} e seus dados foram removidos do Local Storage.`);
+            try {
+                // 1. Deleta o documento do Firestore (perfil)
+                await usersCollection.doc(uid).delete();
+                
+                // 2. O Auth/Firebase precisa de uma função Cloud para deletar o usuário do Auth,
+                // mas para simplificar, a remoção do Firestore (perfil) é o suficiente para bloquear o login,
+                // já que o fetchUserObject() falhará e forçará o logout.
+                
+                // 3. Remove posts do usuário (opcional, dependendo da regra de negócio)
+                // Vamos manter simples: o perfil é o suficiente.
+                
+                renderAllData(); // Força a atualização do cache e das listas
+                alert(`Usuário ${userName} foi removido do Firestore.`);
+                
+            } catch (error) {
+                console.error("Erro ao banir usuário:", error);
+                alert(`❌ Falha ao tentar banir o usuário. Verifique as Regras de Segurança (allow delete).`);
+            }
         }
     }
 
-    function linkTeam(username) { 
-        const selectElement = document.getElementById(`select-team-${username}`);
+    async function linkTeam(uid) { 
+        const selectElement = document.getElementById(`select-team-${uid}`);
         const teamName = selectElement.value;
         
         if (!teamName) {
@@ -883,49 +900,48 @@
         }
 
         const teamDetails = teamData[teamName]; 
-        const user = usuariosCadastrados[username];
-
-        if (Object.values(usuariosCadastrados).some(u => u.teamName === teamName)) {
+        
+        if (getAllTeams().some(u => u.teamName === teamName)) {
             return alert(`O time ${teamName} já está vinculado a outro usuário.`);
         }
 
-        // Vincula e Zera stats
-        user.teamName = teamName;
-        user.series = teamDetails.series;
-        user.logo = teamDetails.logo;
-        user.stats = defaultStats; 
-        user.username = username; 
-
-        saveDataToLocalStorage();
-        
-        renderAdminTeamList();
-        renderClassificationTables();
-        renderTeamsList();
-        alert(`✅ Time ${teamName} vinculado ao usuário ${user.userName}.`);
+        try {
+            await usersCollection.doc(uid).update({
+                teamName: teamName,
+                series: teamDetails.series,
+                logo: teamDetails.logo,
+                stats: defaultStats 
+            });
+            alert(`✅ Time ${teamName} vinculado com sucesso!`);
+            // O listener fará o resto
+        } catch (error) {
+            console.error("Erro ao vincular time:", error);
+            alert("❌ Falha ao vincular time. Verifique as Regras de Segurança (allow write).");
+        }
     }
 
-    function unlinkTeam(username) { 
-        if (!confirm('Tem certeza que deseja desvincular o time deste usuário? O time ficará disponível para ser vinculado novamente.')) {
+    async function unlinkTeam(uid) { 
+        if (!confirm('Tem certeza que deseja desvincular o time deste usuário?')) {
             return;
         }
-        const user = usuariosCadastrados[username];
         
-        // Desvincula e Zera stats
-        user.teamName = null;
-        user.series = null;
-        user.logo = null;
-        user.stats = defaultStats; 
-        
-        saveDataToLocalStorage();
-        
-        renderAdminTeamList();
-        renderClassificationTables();
-        renderTeamsList();
-        alert(`Time desvinculado de ${user.userName}.`);
+        try {
+            await usersCollection.doc(uid).update({
+                teamName: null,
+                series: null,
+                logo: null,
+                stats: defaultStats 
+            });
+            alert(`Time desvinculado com sucesso!`);
+            // O listener fará o resto
+        } catch (error) {
+            console.error("Erro ao desvincular time:", error);
+            alert("❌ Falha ao desvincular time. Verifique as Regras de Segurança (allow write).");
+        }
     }
 
-    function openTeamEditor(username) {
-        const user = usuariosCadastrados[username];
+    function openTeamEditor(uid) {
+        const user = allUsersCache.find(u => u.uid === uid);
         if (!user || user.isAdmin) return alert('Usuário não encontrado ou é o administrador.');
 
         const newUserName = prompt(`Editar nome de exibição do usuário "${user.userName}". Novo nome:`, user.userName);
@@ -936,27 +952,30 @@
         const newPicUrl = prompt(`Editar URL da ${typeToEdit} de "${user.userName}". Nova URL:`, currentPic);
         if (newPicUrl === null) return;
         
-        finalizeUserEdit(username, newUserName, newPicUrl);
+        finalizeUserEdit(uid, newUserName, newPicUrl);
     }
 
-    function finalizeUserEdit(username, newUserName, newPicUrl) { 
-        const user = usuariosCadastrados[username];
-
-        user.userName = newUserName;
+    async function finalizeUserEdit(uid, newUserName, newPicUrl) { 
+        const user = allUsersCache.find(u => u.uid === uid);
+        
+        const updateData = {
+            userName: newUserName
+        };
+        
         if (user.teamName) {
-            user.logo = newPicUrl;
+            updateData.logo = newPicUrl;
         } else {
-            user.profilePic = newPicUrl;
+            updateData.profilePic = newPicUrl;
         }
-        
-        saveDataToLocalStorage();
-        
-        renderAdminTeamList();
-        renderTeamsList();
-        renderClassificationTables();
-        renderFeed();
-        updateHeaderButtons(loggedInUser);
-        alert(`Usuário ${newUserName} atualizado com sucesso!`);
+
+        try {
+            await usersCollection.doc(uid).update(updateData);
+            alert(`Usuário ${newUserName} atualizado com sucesso!`);
+            // O listener fará o resto
+        } catch (error) {
+            console.error("Erro ao editar usuário:", error);
+            alert("❌ Falha ao editar usuário. Verifique as Regras de Segurança (allow write).");
+        }
     }
 
     function populateTeamSelects(seriesFilter = null) {
@@ -970,12 +989,12 @@
 
         teams.forEach(team => {
             const option1 = document.createElement('option');
-            option1.value = team.username; 
+            option1.value = team.uid; // Usa UID
             option1.textContent = team.teamName;
             time1Select.appendChild(option1);
 
             const option2 = document.createElement('option');
-            option2.value = team.username;
+            option2.value = team.uid;
             option2.textContent = team.teamName;
             time2Select.appendChild(option2);
         });
@@ -990,25 +1009,28 @@
     }
 
     // FUNÇÃO REGISTRAR RESULTADO
-    function registrarResultado() { 
+    async function registrarResultado() { 
         const series = document.getElementById('jogo-series').value;
-        const user1 = document.getElementById('jogo-time1').value; 
-        const user2 = document.getElementById('jogo-time2').value; 
+        const uid1 = document.getElementById('jogo-time1').value; 
+        const uid2 = document.getElementById('jogo-time2').value; 
         const gols1 = parseInt(document.getElementById('jogo-gols1').value);
         const gols2 = parseInt(document.getElementById('jogo-gols2').value);
 
-        if (!series || !user1 || !user2 || isNaN(gols1) || isNaN(gols2) || user1 === user2) {
+        if (!series || !uid1 || !uid2 || isNaN(gols1) || isNaN(gols2) || uid1 === uid2) {
             alert('🚨 Por favor, preencha todos os campos corretamente (série, dois times diferentes e gols numéricos).');
             return;
         }
         
-        if (usuariosCadastrados[user1].series !== series || usuariosCadastrados[user2].series !== series) {
-            alert('🚨 Erro: Um ou ambos os times não estão alocados na Série selecionada.');
+        const user1 = allUsersCache.find(u => u.uid === uid1);
+        const user2 = allUsersCache.find(u => u.uid === uid2);
+
+        if (!user1 || !user2 || user1.series !== series || user2.series !== series) {
+            alert('🚨 Erro: Um ou ambos os times não estão alocados na Série selecionada ou não existem no cache.');
             return;
         }
-
-        const stats1 = usuariosCadastrados[user1].stats;
-        const stats2 = usuariosCadastrados[user2].stats;
+        
+        const stats1 = { ...user1.stats }; 
+        const stats2 = { ...user2.stats }; 
 
         // --- Atualiza Estatísticas no Cache Local ---
         stats1.Jogos += 1;
@@ -1044,24 +1066,49 @@
 
         stats2.Pontos += pontos2;
         stats2.Saldo = stats2.GolsPro - stats2.GolsContra;
+        
+        // --- Atualização em Lote (Batch) no Firestore ---
+        const batch = db.batch();
+        
+        // 1. Atualizar Time 1
+        batch.update(usersCollection.doc(uid1), { stats: stats1 });
+        
+        // 2. Atualizar Time 2
+        batch.update(usersCollection.doc(uid2), { stats: stats2 });
+        
+        // 3. Log de Jogo (Opcional, mas útil para admin)
+        batch.set(logsCollection.doc(), {
+            type: 'GAME_RESULT',
+            series: series,
+            time1: user1.teamName,
+            gols1: gols1,
+            time2: user2.teamName,
+            gols2: gols2,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-        // 🚨 SALVA NO LOCAL STORAGE
-        saveDataToLocalStorage();
-        
-        renderClassificationTables();
-        
-        document.getElementById('jogo-gols1').value = '';
-        document.getElementById('jogo-gols2').value = '';
-        
-        alert(`✅ Resultado registrado! ${usuariosCadastrados[user1].teamName} ${gols1} x ${gols2} ${usuariosCadastrados[user2].teamName}. Classificação atualizada. (Apenas localmente)`);
+        try {
+            await batch.commit();
+            
+            document.getElementById('jogo-gols1').value = '';
+            document.getElementById('jogo-gols2').value = '';
+            
+            alert(`✅ Resultado registrado e salvo online! ${user1.teamName} ${gols1} x ${gols2} ${user2.teamName}.`);
+        } catch (error) {
+             console.error("Erro ao registrar resultado em lote:", error);
+             alert("❌ Falha ao registrar resultado. Verifique as Regras de Segurança (allow write).");
+        }
     }
     
     // --- Funções de Perfil ---
-    function openPerfilTime(username) {
+    function openPerfilTime(uid) {
         const perfilModal = document.getElementById('perfil-time');
-        const team = usuariosCadastrados[username];
+        const team = allUsersCache.find(u => u.uid === uid);
 
-        if (!perfilModal || !team || !team.teamName) { alert(`Dados do time não encontrados ou o usuário não está vinculado a um time.`); return; }
+        if (!perfilModal || !team || !team.teamName) { 
+            alert(`Dados do time não encontrados ou o usuário não está vinculado a um time.`); 
+            return; 
+        }
 
         document.getElementById('perfil-time-nome').textContent = team.teamName;
         document.getElementById('perfil-time-logo').src = team.logo || 'https://via.placeholder.com/130/06142e/00ff96?text=LOGO';
@@ -1084,12 +1131,13 @@
         `;
         document.getElementById('perfil-time-stats').innerHTML = statsHtml;
 
-        const teamPosts = posts.filter(post => post.author === team.teamName);
+        const teamPosts = allPostsCache.filter(post => post.author === team.teamName);
         let feedHtml = '';
         if (teamPosts.length > 0) {
             feedHtml = teamPosts.map(post => {
                 let img = post.image ? `<img src="${post.image}" style="max-width:100%; height:auto; border-radius:5px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
-                const dateDisplay = post.timestamp ? new Date(post.timestamp).toLocaleDateString('pt-BR') : post.date;
+                const dateObj = post.timestamp ? post.timestamp.toDate() : new Date();
+                const dateDisplay = dateObj.toLocaleDateString('pt-BR');
                 return `<div style="background:#0a1324; padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.1);"><p style="font-size:0.9em;">${post.content}</p>${img}<p style="font-size:0.7em; color:#999; text-align:right;">${dateDisplay}</p></div>`;
             }).join('');
         } else {
