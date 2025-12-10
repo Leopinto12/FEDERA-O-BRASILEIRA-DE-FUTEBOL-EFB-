@@ -8,7 +8,8 @@
         /* [Seção de Estilos CSS] */
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
         header { text-align: center; padding: 40px 20px 60px; background: linear-gradient(180deg, #06142e, #050b16); border-bottom: 3px solid #00ff96; }
-        .logo { width: 180px; filter: drop-shadow(0 0 15px #00ff96); }
+        /* Logo ajustada para a cor da sua imagem (verde/ciano escuro) */
+        .logo { width: 180px; filter: drop-shadow(0 0 15px #00ff96); } 
         h1 { margin-top: 15px; font-size: 2.8rem; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 15px #00ff96; color: #ffffff; }
         nav { display: flex; justify-content: center; gap: 40px; padding: 20px; background: #06142e; position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid #00ff96; }
         nav a { color: #00ff96; text-decoration: none; font-size: 1.2rem; font-weight: bold; transition: 0.3s ease-in-out; padding: 5px 10px; border-radius: 5px; position: relative; }
@@ -81,7 +82,7 @@
 </head>
 <body>
     <header>
-        <img src="https://i.imgur.com/uG7b3K8.png" class="logo" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/gK0rG8g.png" class="logo" alt="Logo Superliga" />
         <h1>SUPERLIGA BRASILEIRA</h1>
         <button onclick="openLogin()" id="header-login-button" style="margin-top: 20px; padding: 10px 20px; background: #f2c94c; border: none; border-radius: 8px; font-weight: bold; color: #050b16; cursor: pointer; box-shadow: 0 0 10px #f2c94c; transition: background 0.3s;">
             ACESSAR CONTA
@@ -182,7 +183,7 @@
 
 <div id="login" class="modal" style="padding-top:120px; text-align:center;">
     <div class="login-box">
-        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/gK0rG8g.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
         <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">ACESSO DE MEMBRO</h2>
         <input type="email" placeholder="E-mail" id="login-email" class="login-input" />
         <input type="password" placeholder="Senha" id="login-pass" class="login-input" />
@@ -198,7 +199,7 @@
 
 <div id="register" class="modal" style="padding-top:120px; text-align:center;">
     <div class="login-box">
-        <img src="https://i.imgur.com/uG7b3K8.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
+        <img src="https://i.imgur.com/gK0rG8g.png" style="width:140px; filter:drop-shadow(0 0 10px #00ff96); margin-bottom:20px;" alt="Logo Superliga" />
         <h2 style="color:#00ff96; text-shadow:0 0 10px #00ff96; margin-bottom:25px;">CADASTRO DE NOVO MEMBRO</h2>
         
         <input type="url" placeholder="URL da Foto de Perfil (Opcional)" id="register-profile-pic" class="login-input" />
@@ -267,8 +268,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
 <script>
-    // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE **
-    // 🚨 SUAS CHAVES FORAM INSERIDAS AQUI
+    // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE (CHAVES ATUALIZADAS) **
     const firebaseConfig = {
         apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s", 
         authDomain: "super-liga-brasileira.firebaseapp.com",
@@ -282,7 +282,7 @@
     // Inicialize o Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore(); 
-    const auth = firebase.auth(); // Referência ao Firebase Authentication
+    const auth = firebase.auth(); 
 
     // Variável de Cache Local
     let usuariosCadastrados = {}; 
@@ -349,10 +349,10 @@
         userName: 'Robben Anthony',
         teamName: 'Administrador', 
         series: null, 
-        logo: 'https://i.imgur.com/uG7b3K8.png', 
-        profilePic: 'https://i.imgur.com/uG7b3K8.png', 
+        logo: 'https://i.imgur.com/gK0rG8g.png', // Logo da Superliga
+        profilePic: 'https://i.imgur.com/gK0rG8g.png', // Logo da Superliga
         stats: defaultStats,
-        uid: null // Será preenchido com o UID do Auth
+        uid: null 
     };
 
     // --- Funções de Sincronização e Ajuda (FIREBASE) ---
@@ -413,7 +413,7 @@
         }
         
         // 3. Garante que o documento no Firestore exista e esteja sincronizado
-        if (!firestoreDocExists) {
+        if (!firestoreDocExists || initialAdminData.uid !== adminUID) {
             initialAdminData.uid = adminUID;
             await saveUsersToFirestore(adminUserKey, initialAdminData);
         }
@@ -492,7 +492,7 @@
     }
 
 
-    // --- Funções de Login e Cadastro (ATUALIZADAS COM FIREBASE AUTH) ---
+    // --- Funções de Login e Cadastro (ATUALIZADAS COM TRATAMENTO DE ERRO MELHORADO) ---
     function updateHeaderButtons(userKey) {
         const loginBtn = document.getElementById('header-login-button');
         const adminBtn = document.getElementById('admin-panel-button');
@@ -556,13 +556,17 @@
                 alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
                 renderFeed(); 
             } else {
-                alert('❌ Login bem-sucedido, mas dados do usuário incompletos. Contate o administrador.');
+                // Caso o login no Auth funcione, mas o usuário não esteja no Firestore (Problema de Regras/Sync)
+                console.error("Login Auth OK, mas usuário não encontrado no Firestore.");
+                alert('❌ Login bem-sucedido, mas dados do usuário incompletos no Firestore. Verifique as Regras de Leitura do Firestore.');
                 await auth.signOut();
             }
 
         } catch (error) {
             console.error("Erro no login:", error);
             let errorMessage = "❌ Falha no login. Verifique o e-mail e a senha.";
+            
+            // TRATAMENTO DE ERRO APRIMORADO
             if (error.code === 'auth/wrong-password') {
                 errorMessage = "❌ Senha incorreta.";
             } else if (error.code === 'auth/user-not-found') {
@@ -570,8 +574,13 @@
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = "❌ E-mail inválido.";
             } else if (error.code === 'auth/operation-not-allowed') {
-                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth.";
+                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth. **(VERIFIQUE O PASSO 2)**";
+            } else if (error.code === 'auth/invalid-api-key' || error.message.includes('API Key')) {
+                 errorMessage = "🚨 Chave API Inválida. **(VERIFIQUE O PASSO 1 - index.html)**";
+            } else if (error.code === 'auth/network-request-failed') {
+                 errorMessage = "🚨 Falha de Conexão. Verifique sua Internet ou Firewall.";
             }
+            
             alert(errorMessage);
         }
     }
@@ -647,7 +656,7 @@
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = "❌ A senha é muito fraca (mínimo 6 caracteres).";
             } else if (error.code === 'auth/operation-not-allowed') {
-                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth.";
+                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth. **(VERIFIQUE O PASSO 2)**";
             }
             alert(errorMessage);
         }
