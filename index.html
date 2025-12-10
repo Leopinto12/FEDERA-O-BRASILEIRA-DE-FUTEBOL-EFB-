@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SUPERLIGA - Rede Social e Admin (Firebase)</title>
+    <title>SUPERLIGA BRASILEIRA - Rede Social e Admin (Firebase)</title>
     <style>
         /* [Seção de Estilos CSS] */
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050b16; color: #ffffff; line-height: 1.6; }
@@ -268,7 +268,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
 <script>
-    // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE (CHAVES ATUALIZADAS) **
+    // ** CONFIGURAÇÃO DO SEU PROJETO FIREBASE **
     const firebaseConfig = {
         apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s", 
         authDomain: "super-liga-brasileira.firebaseapp.com",
@@ -295,6 +295,7 @@
 
 
     // --- Data dos Times (Série A e B 2025) ---
+    // Você pode editar a URL das logos e a lista de times aqui.
     const teamData = {
         'Atlético-GO': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/4/4e/Atlético_Clube_Goianiense_-_Escudo.png' },
         'Atlético-MG': { series: 'Série A', logo: 'https://upload.wikimedia.org/wikipedia/pt/2/22/Clube_Atlético_Mineiro_-_Escudo.png' },
@@ -346,21 +347,23 @@
         email: 'robbenanthony12@gmail.com', 
         senha: 'Leoup1234', 
         isAdmin: true, 
-        userName: 'Robben Anthony',
-        teamName: 'Administrador', 
+        userName: 'Robben Anthony (ADMIN)',
+        teamName: 'Administrador Superliga', 
         series: null, 
-        logo: 'https://i.imgur.com/gK0rG8g.png', // Logo da Superliga
-        profilePic: 'https://i.imgur.com/gK0rG8g.png', // Logo da Superliga
+        logo: 'https://i.imgur.com/gK0rG8g.png', 
+        profilePic: 'https://i.imgur.com/gK0rG8g.png', 
         stats: defaultStats,
         uid: null 
     };
 
     // --- Funções de Sincronização e Ajuda (FIREBASE) ---
     
-    // NOVO: Função para salvar/atualizar USUÁRIOS no Firestore (Coleção 'users')
+    // Função para salvar/atualizar USUÁRIOS no Firestore (Coleção 'users')
     async function saveUsersToFirestore(userKey, userData) {
         try {
             userData.stats = { ...defaultStats, ...userData.stats }; 
+            // Garante que o usernameKey está presente no objeto
+            userData.username = userKey; 
             await db.collection("users").doc(userKey).set(userData);
         } catch (e) {
             console.error("Erro ao salvar usuário no Firestore: ", e);
@@ -368,7 +371,7 @@
         }
     }
     
-    // NOVO: Função que verifica e cria o administrador no Auth e no Firestore
+    // Função que verifica e cria o administrador no Auth e no Firestore
     async function setupAdminUser() {
         const adminEmail = initialAdminData.email;
         const adminPass = initialAdminData.senha;
@@ -387,14 +390,12 @@
              console.warn("Não foi possível verificar documento admin no Firestore. Tentando criar.", e);
         }
         
-        // 2. Tenta criar a conta no Firebase Auth se o doc não existe ou se o UID não foi encontrado
+        // 2. Tenta fazer login/criar a conta no Firebase Auth
         if (!adminUID) {
             try {
                 const userCredential = await auth.signInWithEmailAndPassword(adminEmail, adminPass);
                 adminUID = userCredential.user.uid;
                 initialAdminData.uid = adminUID;
-                console.log("Conta ADM já existe no Auth e foi validada.");
-
             } catch (authError) {
                 if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password') {
                     try {
@@ -403,8 +404,8 @@
                         initialAdminData.uid = adminUID;
                         console.log("Conta ADM criada com sucesso no Auth.");
                     } catch (e) {
-                        console.error("ERRO CRÍTICO: Falha ao criar conta ADM no Auth. E-mail/Senha deve estar ativo!:", e);
-                        initialAdminData.uid = "AUTH_FAILED_" + new Date().getTime();
+                        console.error("ERRO CRÍTICO: Falha ao criar conta ADM no Auth. E-mail/Senha deve estar ativo!:", e.code || e.message);
+                        initialAdminData.uid = "AUTH_FAILED_" + new Date().getTime(); // Fallback
                     }
                 } else {
                     console.error("Erro de Auth do ADM (Verifique a API Key e o Auth Domain):", authError);
@@ -420,7 +421,7 @@
     }
 
     
-    // NOVO: Função para carregar TODOS os dados (Usuários e Posts)
+    // Função para carregar TODOS os dados (Usuários e Posts)
     async function loadDataFromFirebase() {
         try {
             // 1. Setup do Administrador (Garanti que existe no Auth e Firestore)
@@ -447,7 +448,6 @@
 
         } catch (e) {
             console.error("🚨 ERRO CRÍTICO: Falha ao carregar dados do Firebase. Verifique a conexão e as Regras de Segurança (Firestore).", e);
-            alert("Falha ao carregar dados do Firebase. Verifique o console (F12) para detalhes.");
             
             if (!usuariosCadastrados[adminUserKey]) {
                  usuariosCadastrados[adminUserKey] = initialAdminData;
@@ -471,7 +471,7 @@
         renderTeamsList();
     });
 
-    // --- Funções de Modais e Navegação (Mantidas) ---
+    // --- Funções de Modais e Navegação ---
     function openLogin() { document.getElementById('register').style.display = 'none'; document.getElementById('login').style.display = 'block'; document.body.style.overflow = 'hidden'; }
     function closeLogin() { document.getElementById('login').style.display = 'none'; document.body.style.overflow = 'auto'; }
     function openRegister() { document.getElementById('login').style.display = 'none'; document.getElementById('register').style.display = 'block'; document.body.style.overflow = 'hidden'; }
@@ -492,7 +492,7 @@
     }
 
 
-    // --- Funções de Login e Cadastro (ATUALIZADAS COM TRATAMENTO DE ERRO MELHORADO) ---
+    // --- Funções de Login e Cadastro (INCLUI TRATAMENTO DE ERRO COM CÓDIGO) ---
     function updateHeaderButtons(userKey) {
         const loginBtn = document.getElementById('header-login-button');
         const adminBtn = document.getElementById('admin-panel-button');
@@ -547,7 +547,7 @@
             
             if (!userSnapshot.empty) {
                 const doc = userSnapshot.docs[0];
-                loggedInUser = doc.id; // Armazena a chave de usuário (username key)
+                loggedInUser = doc.id; 
                 loggedInUserUID = uid;
                 localStorage.setItem('loggedInUser', loggedInUser); 
                 
@@ -556,32 +556,36 @@
                 alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
                 renderFeed(); 
             } else {
-                // Caso o login no Auth funcione, mas o usuário não esteja no Firestore (Problema de Regras/Sync)
-                console.error("Login Auth OK, mas usuário não encontrado no Firestore.");
-                alert('❌ Login bem-sucedido, mas dados do usuário incompletos no Firestore. Verifique as Regras de Leitura do Firestore.');
+                // Login Auth OK, mas usuário não está no Firestore
+                console.error("Login Auth OK, mas usuário não encontrado no Firestore. UID:", uid);
+                alert('❌ Login Auth OK, mas dados do usuário incompletos no Firestore. Verifique as Regras de Leitura.');
                 await auth.signOut();
             }
 
         } catch (error) {
             console.error("Erro no login:", error);
+            
             let errorMessage = "❌ Falha no login. Verifique o e-mail e a senha.";
             
-            // TRATAMENTO DE ERRO APRIMORADO
-            if (error.code === 'auth/wrong-password') {
+            // Exibe o código de erro nativo do Firebase (Crucial para o diagnóstico)
+            let firebaseErrorCode = error.code || 'ERRO_DESCONHECIDO';
+            
+            if (firebaseErrorCode === 'auth/wrong-password') {
                 errorMessage = "❌ Senha incorreta.";
-            } else if (error.code === 'auth/user-not-found') {
+            } else if (firebaseErrorCode === 'auth/user-not-found') {
                 errorMessage = "❌ Usuário não encontrado.";
-            } else if (error.code === 'auth/invalid-email') {
+            } else if (firebaseErrorCode === 'auth/invalid-email') {
                 errorMessage = "❌ E-mail inválido.";
-            } else if (error.code === 'auth/operation-not-allowed') {
-                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth. **(VERIFIQUE O PASSO 2)**";
-            } else if (error.code === 'auth/invalid-api-key' || error.message.includes('API Key')) {
-                 errorMessage = "🚨 Chave API Inválida. **(VERIFIQUE O PASSO 1 - index.html)**";
-            } else if (error.code === 'auth/network-request-failed') {
+            } else if (firebaseErrorCode === 'auth/operation-not-allowed') {
+                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth.";
+            } else if (firebaseErrorCode === 'auth/invalid-api-key') {
+                 errorMessage = "🚨 Chave API Inválida no index.html.";
+            } else if (firebaseErrorCode === 'auth/network-request-failed') {
                  errorMessage = "🚨 Falha de Conexão. Verifique sua Internet ou Firewall.";
             }
             
-            alert(errorMessage);
+            // Alerta Final: Agora mostra o código do erro para nós!
+            alert(`${errorMessage} (Código: ${firebaseErrorCode})`);
         }
     }
 
@@ -632,6 +636,7 @@
                 senha: pass, 
                 isAdmin: false,
                 userName: user, 
+                username: usernameKey, // Garante que a chave é salva no documento
                 profilePic: profilePicUrl || 'https://via.placeholder.com/130/06142e/00ff96?text=👤', 
                 teamName: null, 
                 series: null,
@@ -651,18 +656,21 @@
         } catch (error) {
             console.error("Erro no cadastro:", error);
             let errorMessage = "❌ Falha no cadastro.";
-            if (error.code === 'auth/email-already-in-use') {
+            
+            let firebaseErrorCode = error.code || 'ERRO_DESCONHECIDO';
+
+            if (firebaseErrorCode === 'auth/email-already-in-use') {
                 errorMessage = "❌ Este e-mail já está em uso.";
-            } else if (error.code === 'auth/weak-password') {
+            } else if (firebaseErrorCode === 'auth/weak-password') {
                 errorMessage = "❌ A senha é muito fraca (mínimo 6 caracteres).";
-            } else if (error.code === 'auth/operation-not-allowed') {
-                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth. **(VERIFIQUE O PASSO 2)**";
+            } else if (firebaseErrorCode === 'auth/operation-not-allowed') {
+                errorMessage = "🚨 Provedor de E-mail/Senha desativado no Firebase Auth.";
             }
-            alert(errorMessage);
+            alert(`${errorMessage} (Código: ${firebaseErrorCode})`);
         }
     }
 
-    // --- Funções de Feed (Mantidas) ---
+    // --- Funções de Feed ---
     function showImagePreview(url) {
         const imgPreview = document.getElementById('image-preview');
         if (url) {
@@ -783,7 +791,7 @@
         });
     }
 
-    // --- Funções de Classificação (Mantidas) ---
+    // --- Funções de Classificação ---
     function sortTeams(a, b) {
         if (b.stats.Pontos !== a.stats.Pontos) return b.stats.Pontos - a.stats.Pontos;
         if (b.stats.Vitórias !== a.stats.Vitórias) return b.stats.Vitórias - a.stats.Vitórias;
@@ -847,7 +855,7 @@
         renderTable('tabela-serie-b', serieB, 'series-b-status');
     }
 
-    // --- Funções de Gestão Admin (Mantidas) ---
+    // --- Funções de Gestão Admin ---
     
     function getAllAvailableTeams() {
         const allUsers = Object.values(usuariosCadastrados);
@@ -1100,7 +1108,7 @@
         }
     }
 
-    // FUNÇÃO REGISTRAR RESULTADO ATUALIZADA (AGORA SALVA NO FIREBASE)
+    // FUNÇÃO REGISTRAR RESULTADO
     async function registrarResultado() { 
         const series = document.getElementById('jogo-series').value;
         const user1 = document.getElementById('jogo-time1').value; 
@@ -1168,7 +1176,7 @@
         alert(`✅ Resultado registrado! ${usuariosCadastrados[user1].teamName} ${gols1} x ${gols2} ${usuariosCadastrados[user2].teamName}. Classificação atualizada.`);
     }
     
-    // --- Funções de Perfil (Mantidas) ---
+    // --- Funções de Perfil ---
     function openPerfilTime(username) {
         const perfilModal = document.getElementById('perfil-time');
         const team = usuariosCadastrados[username];
