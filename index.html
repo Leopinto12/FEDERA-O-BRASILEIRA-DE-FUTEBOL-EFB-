@@ -167,8 +167,8 @@
             <div class="title">📸 Feed Oficial</div>
 
             <div id="post-form-container" style="display:none; margin-bottom: 30px; padding: 15px; background: #06142e; border-radius: 10px; border: 1px solid #f2c94c;">
-                <h3 style="color:#f2c94c;">O que está acontecendo na Superliga?</h3>
-                <textarea id="post-input" placeholder="Publique uma notícia, atualização ou mensagem..." maxlength="300"></textarea>
+                <h3 style="color:#f2c94c;">O que está acontecendo na Superliga? (Max: 500 caracteres)</h3>
+                <textarea id="post-input" placeholder="Publique uma notícia, atualização ou mensagem..." maxlength="500"></textarea>
                 
                 <input type="url" id="post-image-url" 
                         placeholder="URL da Imagem (opcional)" 
@@ -183,7 +183,8 @@
             </div>
 
             <div id="feed-posts">
-                </div>
+                <p>Carregando Feed...</p>
+            </div>
         </div>
     </div>
 
@@ -335,6 +336,7 @@
 <script>
     // ** CONFIGURAÇÃO DO FIREBASE **
     const firebaseConfig = {
+        // MANTENDO A CONFIGURAÇÃO QUE VOCÊ ESTAVA USANDO
         apiKey: "AIzaSyAJoUwJY_EQ0LJ4g-Fvri07hDSL96qul7s",
         authDomain: "super-liga-brasileira.firebaseapp.com",
         projectId: "super-liga-brasileira",
@@ -414,14 +416,15 @@
         // Observa o estado de autenticação do Firebase
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Usuário logado via Auth, agora busca os dados no Firestore
+                // Usuário logado via Auth, busca os dados no Firestore
                 fetchUserObject(user.uid);
             } else {
                 // Usuário deslogado
                 loggedInUserUID = null;
                 loggedInUserObject = null;
                 updateHeaderButtons(null);
-                renderAllData(); // Limpa/Atualiza a UI para o estado deslogado
+                // Mesmo deslogado, renderiza os dados públicos (classificação e feed)
+                renderAllData(); 
             }
         });
         
@@ -433,6 +436,7 @@
 
     function setupFirestoreListeners() {
         // 1. Ouvir mudanças na coleção 'users'
+        // ESSA FUNÇÃO FOI RESTAURADA PARA O MODELO QUE FUNCIONA PARA CARREGAR OS DADOS
         usersCollection.onSnapshot(snapshot => {
             allUsersCache = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
             
@@ -441,12 +445,13 @@
                  loggedInUserObject = allUsersCache.find(u => u.uid === loggedInUserUID);
             }
             
-            renderAllData();
+            // Renderiza tudo (mesmo se o usuário estiver deslogado, para carregar tabelas e times)
+            renderAllData(); 
         }, err => {
             console.error("Erro ao receber dados dos usuários:", err);
             // Mensagem de erro que aponta para as regras de segurança
-            document.getElementById('series-a-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
-            document.getElementById('series-b-status').textContent = "ERRO AO CARREGAR DADOS. Verifique as Regras de Segurança do Firestore.";
+            document.getElementById('series-a-status').textContent = "⚠️ ERRO DE LEITURA. Verifique as Regras de Segurança do Firestore para a coleção 'users'.";
+            document.getElementById('series-b-status').textContent = "⚠️ ERRO DE LEITURA. Verifique as Regras de Segurança do Firestore para a coleção 'users'.";
         });
         
         // 2. Ouvir mudanças na coleção 'posts'
@@ -455,19 +460,23 @@
             renderFeed();
         }, err => {
             console.error("Erro ao receber dados dos posts:", err);
+            document.getElementById('feed-posts').innerHTML = '<p style="color:red; text-align:center;">⚠️ ERRO AO CARREGAR O FEED. Verifique as Regras de Segurança do Firestore para a coleção \'posts\'.</p>';
         });
     }
     
     function renderAllData() {
         renderClassificationTables();
         renderTeamsList();
-        renderAdminTeamList(); // Atualiza a gestão no painel admin se aberto
+        if(loggedInUserObject && loggedInUserObject.isAdmin) {
+             renderAdminTeamList(); // Atualiza a gestão no painel admin se aberto
+        }
         updateHeaderButtons(loggedInUserObject); // Redraw buttons/display name
     }
 
     // --- Funções Auxiliares de Dados ---
 
     async function fetchUserObject(uid) {
+        // Esta função foi reescrita para ser mais simples e menos propensa a erros de 'dados incompletos'
         try {
             const doc = await usersCollection.doc(uid).get();
             if (doc.exists) {
@@ -476,7 +485,7 @@
                 updateHeaderButtons(loggedInUserObject);
                 renderAllData(); 
                 
-                // Lógica de Confirmação de ADM (Leo Pinto/Caio)
+                // Lógica de Confirmação de ADM (Robben Anthony)
                 if (loggedInUserObject.email === 'robbenanthony12@gmail.com' && !loggedInUserObject.isAdmin) {
                     await usersCollection.doc(uid).update({ isAdmin: true, userName: 'Robben Anthony (ADMIN)' });
                     loggedInUserObject.isAdmin = true;
@@ -488,6 +497,7 @@
                 }
             } else {
                 console.warn("Usuário autenticado, mas dados não encontrados no Firestore. UID:", uid);
+                // Se o usuário existe no Auth mas não no Firestore, forçamos o logout para evitar loops.
                 await auth.signOut();
             }
         } catch (error) {
@@ -576,6 +586,8 @@
                 message = '❌ Senha incorreta.';
             } else if (error.code === 'auth/invalid-email') {
                 message = '❌ E-mail inválido.';
+            } else if (error.code === 'auth/invalid-login-credentials') {
+                 message = '❌ Falha no login. Verifique o e-mail e a senha.';
             } else {
                 message += ` [${error.code}]`;
             }
@@ -640,7 +652,8 @@
     
     function showImagePreview(url) {
         const preview = document.getElementById('image-preview');
-        if (url) {
+        // Usamos uma validação básica para exibir a preview.
+        if (url && (url.startsWith('http') || url.startsWith('https'))) { 
             preview.src = url;
             preview.style.display = 'block';
         } else {
@@ -662,8 +675,9 @@
             return;
         }
         
-        if (content.length > 300) {
-            alert('A postagem não pode ter mais de 300 caracteres.');
+        // NOVO LIMITE: 500 CARACTERES
+        if (content.length > 500) { 
+            alert('A postagem não pode ter mais de 500 caracteres.');
             return;
         }
 
@@ -702,6 +716,9 @@
             if (post.timestamp && post.timestamp.toDate) {
                 dateStr = post.timestamp.toDate().toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
             }
+            
+            // Verificação de URL para garantir que a imagem não tente carregar algo inválido
+            const isValidImageUrl = post.imageUrl && (post.imageUrl.startsWith('http') || post.imageUrl.startsWith('https'));
 
             const postElement = document.createElement('div');
             postElement.className = 'post';
@@ -711,7 +728,7 @@
                     <span class="post-author">${author.userName || author.email} ${author.isAdmin ? '(ADMIN)' : ''}</span>
                     <span class="post-date"> - ${dateStr}</span>
                 </div>
-                ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Imagem do Post" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; margin-bottom: 10px; border: 1px solid #00ff96;">` : ''}
+                ${isValidImageUrl ? `<img src="${post.imageUrl}" alt="Imagem do Post" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; margin-bottom: 10px; border: 1px solid #00ff96;">` : ''}
                 <div class="post-content">${post.content}</div>
             `;
             feedContainer.appendChild(postElement);
@@ -748,6 +765,7 @@
         
         allUsersCache.forEach(user => {
             if (user.teamName && teamStats[user.teamName] && user.stats) {
+                // Ao invés de sobrescrever, pegamos os dados e adicionamos o Time/Série para a ordenação.
                 teamStats[user.teamName] = { 
                     Team: user.teamName, 
                     Series: teamData[user.teamName].series,
@@ -879,7 +897,10 @@
         document.getElementById('perfil-time-user-name').textContent = `Gerente: ${ownerName}`;
         
         // 2. Estatísticas
-        const teamStats = allUsersCache.find(u => u.teamName === teamName && u.stats)?.stats || defaultStats;
+        // Acessamos o objeto de estatísticas do cache
+        const userWithStats = allUsersCache.find(u => u.teamName === teamName && u.stats);
+        const teamStats = userWithStats ? userWithStats.stats : defaultStats;
+
         const statsHtml = `
             <p><strong>Pontos:</strong> ${teamStats.Pontos}</p>
             <p><strong>Jogos:</strong> ${teamStats.Jogos}</p>
