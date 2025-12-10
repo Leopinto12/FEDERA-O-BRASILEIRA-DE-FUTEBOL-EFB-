@@ -542,7 +542,10 @@
             const userCredential = await auth.signInWithEmailAndPassword(email, pass);
             const uid = userCredential.user.uid;
 
-            // 2. Busca o usuário correspondente no Firestore (pelo UID)
+            // **CORREÇÃO APLICADA AQUI** // 2. Recarrega TODOS os dados (incluindo o usuário logado) para garantir que o cache local esteja atualizado.
+            await loadDataFromFirebase();
+            
+            // 3. Busca o usuário correspondente no Firestore (pelo UID)
             const userSnapshot = await db.collection("users").where("uid", "==", uid).limit(1).get();
             
             if (!userSnapshot.empty) {
@@ -551,12 +554,16 @@
                 loggedInUserUID = uid;
                 localStorage.setItem('loggedInUser', loggedInUser); 
                 
+                // Mudei o alerta para verificar se o objeto existe ANTES de tentar ler as propriedades
+                const userObject = usuariosCadastrados[loggedInUser];
+                const displayName = userObject ? (userObject.userName || userObject.teamName) : loggedInUser;
+                
                 closeLogin();
                 updateHeaderButtons(loggedInUser);
-                alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
+                alert(`✅ Login bem-sucedido! Bem-vindo(a), ${displayName}.`);
                 renderFeed(); 
             } else {
-                // Login Auth OK, mas usuário não está no Firestore (Provavelmente regras bloqueando)
+                // Login Auth OK, mas usuário não está no Firestore (Provavelmente regras bloqueando ou erro de busca)
                 console.error("Login Auth OK, mas usuário não encontrado no Firestore. UID:", uid);
                 alert('❌ Login Auth OK, mas dados do usuário incompletos no Firestore. Verifique as Regras de Leitura.');
                 await auth.signOut();
@@ -765,7 +772,7 @@
             let imageHtml = post.image ? `<img src="${post.image}" alt="Imagem do Post" style="max-width:100%; height:auto; border-radius:8px; margin-top:10px;" onerror="this.style.display='none'"/>` : '';
             
             let adminDeleteBtn = '';
-            if (loggedInUser && usuariosCadastrados[loggedInUser].isAdmin) {
+            if (loggedInUser && usuariosCadastrados[loggedInUser] && usuariosCadastrados[loggedInUser].isAdmin) {
                 adminDeleteBtn = `<span style="color: #ff004c; font-size: 0.8em; margin-left: 15px; cursor: pointer;" onclick="deletePost('${post.id}')">Excluir</span>`;
             }
             
