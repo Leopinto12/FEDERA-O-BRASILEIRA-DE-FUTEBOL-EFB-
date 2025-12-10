@@ -353,7 +353,7 @@
         logo: 'https://i.imgur.com/gK0rG8g.png', 
         profilePic: 'https://i.imgur.com/gK0rG8g.png', 
         stats: defaultStats,
-        uid: null 
+        uid: null // Será preenchido pelo Auth
     };
 
     // --- Funções de Sincronização e Ajuda (FIREBASE) ---
@@ -556,7 +556,7 @@
                 alert(`✅ Login bem-sucedido! Bem-vindo(a), ${usuariosCadastrados[loggedInUser].userName || usuariosCadastrados[loggedInUser].teamName}.`);
                 renderFeed(); 
             } else {
-                // Login Auth OK, mas usuário não está no Firestore
+                // Login Auth OK, mas usuário não está no Firestore (Provavelmente regras bloqueando)
                 console.error("Login Auth OK, mas usuário não encontrado no Firestore. UID:", uid);
                 alert('❌ Login Auth OK, mas dados do usuário incompletos no Firestore. Verifique as Regras de Leitura.');
                 await auth.signOut();
